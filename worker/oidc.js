@@ -48,7 +48,7 @@ export const APPS = {
     site: "https://paulus.ia.br",
     privacidade: "https://paulus.ia.br/politica-de-privacidade",
     termos: "https://paulus.ia.br/termos-de-uso",
-    icone: "/assets/apps/pavlvs.png",
+    icone: "/assets/paulus-p.png",
     daAtos: true,
   },
 };

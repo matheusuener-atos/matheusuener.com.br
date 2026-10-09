@@ -79,7 +79,7 @@ h1 { font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 
 .cabeca .rotulo { padding-top: 4px; }
 .secao { padding: 20px 4px 0; }
 
-.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
 .cartao > * { margin: 0; }
 .texto-cartao { color: var(--link); font-size: 14px; }
 .texto-cartao strong { color: var(--ink); font-weight: 500; }
@@ -87,7 +87,7 @@ h1 { font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 
 .campo { display: flex; flex-direction: column; gap: 8px; }
 .campo .topo-campo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .campo input {
-  height: 40px; width: 100%; padding: 0 14px; background: var(--campo); border: 1px solid var(--linha); border-radius: 12px;
+  height: 40px; width: 100%; padding: 0 14px; background: var(--campo); border: 1px solid var(--linha); border-radius: 0;
   color: var(--ink); font: inherit; font-size: 14px; outline: none;
 }
 .campo input:focus { border-color: var(--foco); }
@@ -98,9 +98,9 @@ h1 { font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 
 .erro:empty { display: none; }
 
 /* o botao dentro do trilho, como no desenho */
-.trilho { display: flex; gap: 3px; padding: 3px; background: var(--campo); border: 1px solid var(--linha); border-radius: 12px; }
+.trilho { display: flex; gap: 3px; padding: 3px; background: var(--campo); border: 1px solid var(--linha); border-radius: 0; }
 .trilho button {
-  flex: 1; height: 34px; background: var(--btn); border: 1px solid var(--btn-borda); border-radius: 9px; color: var(--ink);
+  flex: 1; height: 34px; background: var(--btn); border: 1px solid var(--btn-borda); border-radius: 0; color: var(--ink);
   font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset;
 }
 .trilho button:hover { background: var(--btn-hover); border-color: var(--btn-borda-hover); }
@@ -116,16 +116,16 @@ button:focus-visible, .google:focus-visible, .link:focus-visible { outline: 2px 
 
 .google {
   height: 56px; display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--g); border: 1px solid var(--linha);
-  border-radius: 12px; color: var(--ink); font-size: 14px; font-weight: 500; text-decoration: none;
+  border-radius: 0; color: var(--ink); font-size: 14px; font-weight: 500; text-decoration: none;
 }
 .google:hover { background: var(--g-hover); border-color: var(--btn-borda); color: var(--ink); }
 
 /* o consentimento */
 .app { display: flex; align-items: center; gap: 14px; }
-.app img { width: 48px; height: 48px; border-radius: 10px; border: 1px solid var(--linha); }
+.app img { width: 48px; height: 48px; border-radius: 0; border: 1px solid var(--linha); }
 .app strong { display: block; font-size: 16px; font-weight: 500; }
 .app small { color: var(--muted); font-size: 13px; }
-.quem { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--campo); border: 1px solid var(--linha); border-radius: 12px; padding: 10px 14px; overflow-wrap: anywhere; }
+.quem { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--campo); border: 1px solid var(--linha); border-radius: 0; padding: 10px 14px; overflow-wrap: anywhere; }
 .permissoes { list-style: none; padding: 0; border-top: 1px solid var(--linha); }
 .permissoes li { padding: 11px 0 11px 26px; border-bottom: 1px solid var(--linha); position: relative; }
 .permissoes li::before { content: ""; position: absolute; left: 4px; top: 18px; width: 9px; height: 5px; border-left: 2px solid var(--ok); border-bottom: 2px solid var(--ok); transform: rotate(-45deg); }
@@ -136,7 +136,7 @@ button:focus-visible, .google:focus-visible, .link:focus-visible { outline: 2px 
 .acoes { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lista { list-style: none; padding: 0; }
 .lista li { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--linha); }
-.lista li img { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--linha); }
+.lista li img { width: 40px; height: 40px; border-radius: 0; border: 1px solid var(--linha); }
 .lista li div { flex: 1; min-width: 0; }
 .lista li strong { font-weight: 500; }
 .lista li small { display: block; color: var(--muted); }
@@ -172,7 +172,7 @@ main.home { width: 100%; max-width: 1080px; margin: 0 auto; padding: 112px 32px;
 .chamadas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 4px; }
 .chamadas .trilho a {
   height: 34px; padding: 0 20px; display: flex; align-items: center; background: var(--btn); border: 1px solid var(--btn-borda);
-  border-radius: 9px; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink);
+  border-radius: 0; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink);
 }
 .chamadas .trilho a:hover { background: var(--btn-hover); border-color: var(--btn-borda-hover); }
 .chamada { height: 40px; padding: 0 16px; display: flex; align-items: center; color: var(--link); font-size: 14px; font-weight: 500; text-decoration: none; }
@@ -186,15 +186,15 @@ main.home { width: 100%; max-width: 1080px; margin: 0 auto; padding: 112px 32px;
 }
 .produto:hover { background: var(--g-hover); border-color: var(--btn-borda); color: var(--ink); }
 .produto-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.produto-topo img { width: 48px; height: 48px; border-radius: 12px; }
+.produto-topo img { width: 48px; height: 48px; border-radius: 0; }
 .produto-pe { display: flex; flex-direction: column; gap: 8px; }
 .produto-nome { font-family: var(--serif); font-size: 32px; line-height: 1; letter-spacing: .04em; }
 .produto-desc { font-size: 14px; color: var(--link); text-wrap: pretty; }
 
-.indice { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 4px 8px; display: flex; flex-direction: column; }
+.indice { background: var(--cartao); border: 1px solid var(--linha); border-radius: 0; padding: 4px 8px; display: flex; flex-direction: column; }
 .indice a {
   display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 16px; min-height: 72px; padding: 12px;
-  border-top: 1px solid var(--linha-fraca); border-radius: 8px; text-decoration: none; color: var(--ink); scroll-margin-top: 24px;
+  border-top: 1px solid var(--linha-fraca); border-radius: 0; text-decoration: none; color: var(--ink); scroll-margin-top: 24px;
 }
 .indice a:first-child { border-top: 0; }
 .indice a:hover { background: var(--g-hover); color: var(--ink); }
@@ -203,10 +203,10 @@ main.home { width: 100%; max-width: 1080px; margin: 0 auto; padding: 112px 32px;
 .indice .titulo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; font-weight: 500; }
 .indice .desc { font-size: 14px; color: var(--link); }
 .indice .seta { font-size: 18px; color: var(--muted); }
-.novo { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; font-weight: 400; color: var(--ink); border: 1px solid var(--btn-borda); border-radius: 6px; padding: 3px 6px; }
+.novo { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; font-weight: 400; color: var(--ink); border: 1px solid var(--btn-borda); border-radius: 0; padding: 3px 6px; }
 
 .fundador { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 20px; padding: 24px 4px 0; border-top: 1px solid var(--linha-fraca); }
-.fundador img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--g); }
+.fundador img { width: 72px; height: 72px; border-radius: 0; object-fit: cover; background: var(--g); }
 .fundador > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .fundador p { margin: 0; font-family: var(--serif); font-style: italic; font-size: 19px; line-height: 1.5; color: var(--link); text-wrap: pretty; }
 .assinatura { display: flex; flex-wrap: wrap; gap: 8px 16px; }
