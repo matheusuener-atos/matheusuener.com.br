@@ -32,6 +32,7 @@
 
 import { EMISSOR, aleatorio, b64url, b64urlTexto, deB64url, json, kv, lerJson, sha256 } from "./comum.js";
 import { sessaoDe } from "./contas.js";
+import { googleLigado } from "./google.js";
 
 const CODIGO_S = 120;
 const TOKEN_S = 3600;
@@ -57,6 +58,9 @@ export const CLIENTES = {
   "pavlvs-site": { app: "pavlvs", voltas: ["https://paulus.ia.br/entrar-atos/"], origens: ["https://paulus.ia.br"] },
   // O PAULUS instalado: volta a um endereco local da maquina (RFC 8252, porta qualquer).
   "pavlvs-app": { app: "pavlvs", loopback: true, origens: [] },
+  // A equipe que entra de fora, pelo endereco do escritorio (<escritorio>.paulus.ia.br, o tunel ate o PAULUS
+  // dele): volta direto ao escritorio, que troca o codigo do proprio servidor (sem CORS).
+  "pavlvs-escritorio": { app: "pavlvs", padrao: /^https:\/\/(?!www\.|admin\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.paulus\.ia\.br\/api\/acesso\/atos\/retorno$/, origens: [] },
 };
 
 export const ESCOPOS = {
@@ -70,6 +74,7 @@ const lista = (s) => String(s || "").split(/\s+/).filter(Boolean);
 function voltaPermitida(cliente, volta) {
   if (!volta || volta.length > 500) return false;
   if (cliente.voltas && cliente.voltas.includes(volta)) return true;
+  if (cliente.padrao && cliente.padrao.test(volta)) return true;
   if (cliente.loopback) {
     try {
       const u = new URL(volta);
@@ -350,7 +355,7 @@ export async function atenderOIDC(request, env, url, deps = {}) {
       app: publicoDoApp(pedido.app),
       escopos: pedido.escopos.map((s) => ({ id: s, texto: ESCOPOS[s] })),
       conta: sessao ? { email: sessao.email, nome: sessao.nome } : null,
-      entrar, permitido, dica: pedido.dica,
+      entrar, permitido, dica: pedido.dica, google: googleLigado(env),
     });
   }
 

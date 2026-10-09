@@ -9,6 +9,7 @@
 import { EMISSOR, dentroDoLimite, json } from "./comum.js";
 import { atenderConta, ehRotaDaConta } from "./contas.js";
 import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
+import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
 
 const CSP_CONTA = [
   "default-src 'self'",
@@ -54,6 +55,7 @@ export default {
       return Response.redirect(EMISSOR + url.pathname + url.search, 301);
     }
     try {
+      if (ehRotaDoGoogle(url)) return comCabecalhos(await atenderGoogle(request, env, url));
       if (ehRotaDoOIDC(url)) {
         if (url.pathname.startsWith("/api/") && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderOIDC(request, env, url, { dentroDoLimite }));

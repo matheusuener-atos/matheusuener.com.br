@@ -20,6 +20,7 @@ const jwk = { ...(await crypto.subtle.exportKey("jwk", par.privateKey)), kid: "a
 const emails = [];
 globalThis.fetch = async (u, op) => {
   if (String(u).startsWith("https://api.resend.com")) { emails.push(JSON.parse(op.body)); return new Response("{}", { status: 200 }); }
+  if (String(u) === "https://oauth2.googleapis.com/token") return googleResponde(op);
   throw new Error("fetch inesperado: " + u);
 };
 const env = { CONTAS, ATOS_CHAVE: JSON.stringify(jwk), RESEND_API_KEY: "re_teste", ASSETS: { fetch: async () => new Response("<p>pagina</p>", { headers: { "content-type": "text/html" } }) } };
@@ -137,6 +138,12 @@ r = await chamar("/api/pedido", { corpo: { consulta: consulta({ client_id: "pavl
 checar(r.d.ir && r.d.ir.startsWith("http://127.0.0.1:53111/atos?code="), "prompt=none ja permitido: volta direto com o codigo");
 r = await chamar("/api/pedido", { corpo: { consulta: consulta({ client_id: "pavlvs-app", redirect_uri: "http://evil.example:53111/atos", code_challenge: p2.desafio }) } });
 checar(r.status === 400, "programa: so volta para 127.0.0.1");
+r = await chamar("/api/pedido", { corpo: { consulta: consulta({ client_id: "pavlvs-escritorio", redirect_uri: "https://moura.paulus.ia.br/api/acesso/atos/retorno", code_challenge: p2.desafio }) } });
+checar(r.d.permitido === true && r.d.app.nome === "PAVLVS", "a equipe de fora (pavlvs-escritorio) volta ao endereco do escritorio, com a mesma permissao do PAVLVS", r.d);
+for (const fora of ["https://www.paulus.ia.br/api/acesso/atos/retorno", "https://moura.paulus.ia.br.golpe.com/api/acesso/atos/retorno", "https://moura.paulus.ia.br/outra"]) {
+  r = await chamar("/api/pedido", { corpo: { consulta: consulta({ client_id: "pavlvs-escritorio", redirect_uri: fora, code_challenge: p2.desafio }) } });
+  checar(r.status === 400, "escritorio: recusa " + fora);
+}
 r = await chamar("/api/pedido", { corpo: { consulta: consulta({ code_challenge: p2.desafio, prompt: "consent" }) } });
 checar(r.d.permitido === false, "prompt=consent pede de novo");
 
@@ -162,6 +169,80 @@ Date.now = antes;
 cookie = sessaoVelha;
 r = await chamar("/api/eu", { metodo: "GET" });
 checar(r.d.conta === null, "a sessao de antes da troca caiu");
+
+console.log("continuar com Google");
+let googleDiz = {};
+let googleRecebeu = null;
+function googleResponde(op) {
+  googleRecebeu = Object.fromEntries(new URLSearchParams(op.body));
+  const enc = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const corpo = { iss: "https://accounts.google.com", aud: "cliente-atos", exp: Math.floor(Date.now() / 1000) + 3600, email_verified: true, ...googleDiz };
+  return new Response(JSON.stringify({ access_token: "g", id_token: enc({ alg: "RS256" }) + "." + enc(corpo) + ".x" }), { status: 200 });
+}
+async function irAoGoogle(consulta, envUsado) {
+  const r = await worker.fetch(new Request(A + "/oauth/google?consulta=" + encodeURIComponent(consulta || "")), envUsado);
+  const destino = new URL(r.headers.get("location"));
+  return { r, destino, state: destino.searchParams.get("state") };
+}
+async function voltarDoGoogle(state, envUsado, extra = "") {
+  const r = await worker.fetch(new Request(A + "/oauth/google/volta?code=c1&state=" + encodeURIComponent(state) + extra), envUsado);
+  const sc = r.headers.get("set-cookie") || "";
+  return { r, local: r.headers.get("location") || "", cookie: sc ? sc.split(";")[0] : "" };
+}
+const nonceDe = () => {
+  const k = [...guardados.keys()].find((x) => x.startsWith("atos:google:"));
+  return k ? JSON.parse(guardados.get(k)).nonce : "";
+};
+{
+  let g = await irAoGoogle("", env);
+  checar(g.r.status === 302 && g.destino.pathname === "/entrar/" && g.destino.searchParams.get("erro_google"), "sem o cliente do Google: volta a /entrar dizendo que nao esta ligado");
+  r = await chamar("/api/eu", { metodo: "GET", semCookie: true });
+  checar(r.d.google === false, "e o botao nao aparece (/api/eu google: false)");
+
+  const envG = { ...env, GOOGLE_CLIENT_ID: "cliente-atos", GOOGLE_CLIENT_SECRET: "segredo" };
+  const Q = consulta({ code_challenge: p2.desafio });
+  g = await irAoGoogle(Q, envG);
+  checar(g.destino.origin === "https://accounts.google.com" && g.destino.searchParams.get("client_id") === "cliente-atos"
+    && g.destino.searchParams.get("redirect_uri") === A + "/oauth/google/volta" && g.destino.searchParams.get("code_challenge_method") === "S256"
+    && g.destino.searchParams.get("scope") === "openid email profile", "vai ao Google com o cliente da Atos, PKCE e so a identidade", g.destino.toString());
+  googleDiz = { sub: "g-joao", email: "Joao@Escritorio.adv.br", name: "João Google", nonce: nonceDe() };
+  let v = await voltarDoGoogle(g.state, envG);
+  const contaJ = JSON.parse(guardados.get("id:conta:joao@escritorio.adv.br"));
+  checar(v.r.status === 302 && v.local.startsWith(A + "/entrar/?") && new URL(v.local).searchParams.get("client_id") === "pavlvs-site" && v.cookie.startsWith("__Host-atos="),
+    "a volta abre a sessao e segue o pedido do aplicativo", v.local);
+  checar(contaJ.sub === conta.sub && contaJ.google === "g-joao" && contaJ.hash, "e-mail que ja tem conta com senha: a mesma conta (o mesmo sub), com o Google anotado", contaJ);
+  checar(googleRecebeu && googleRecebeu.client_secret === "segredo" && googleRecebeu.code_verifier && googleRecebeu.redirect_uri === A + "/oauth/google/volta",
+    "a troca no Google leva o segredo, o verifier e o mesmo endereco de volta");
+  v = await voltarDoGoogle(g.state, envG);
+  checar(v.local.includes("erro_google") && !v.cookie, "o mesmo state nao vale duas vezes");
+
+  guardados.set("id:google:dora@gmail.com", JSON.stringify({ sub: "111-do-paulus" }));
+  g = await irAoGoogle("", envG);
+  googleDiz = { sub: "111-do-paulus", email: "dora@gmail.com", name: "Dora", nonce: nonceDe() };
+  v = await voltarDoGoogle(g.state, envG);
+  const contaD = JSON.parse(guardados.get("id:conta:dora@gmail.com"));
+  checar(v.local === A + "/conta/" && contaD.sub === "111-do-paulus" && !contaD.hash && contaD.nome === "Dora",
+    "quem ja entrava no PAVLVS com o Google: a conta Atos nasce sem senha, com o mesmo sub de la", contaD);
+  r = await chamar("/api/entrar", { corpo: { email: "dora@gmail.com", senha: "qualquercoisa1" }, semCookie: true });
+  checar(r.status === 401, "conta so com o Google nao entra por senha");
+
+  g = await irAoGoogle("", envG);
+  googleDiz = { sub: "g-novo", email: "novo@gmail.com", name: "Novo", nonce: "outro" };
+  v = await voltarDoGoogle(g.state, envG);
+  checar(v.local.includes("erro_google") && !guardados.has("id:conta:novo@gmail.com"), "nonce que nao confere: recusado, nada criado");
+  g = await irAoGoogle("", envG);
+  googleDiz = { sub: "g-novo", email: "novo@gmail.com", name: "Novo", nonce: nonceDe(), email_verified: false };
+  v = await voltarDoGoogle(g.state, envG);
+  checar(v.local.includes("erro_google") && !guardados.has("id:conta:novo@gmail.com"), "e-mail nao verificado pelo Google: recusado");
+  g = await irAoGoogle("", envG);
+  googleDiz = { sub: "g-novo", email: "novo@gmail.com", name: "Novo", nonce: nonceDe() };
+  v = await voltarDoGoogle(g.state, envG);
+  checar(JSON.parse(guardados.get("id:conta:novo@gmail.com")).sub === "g-novo" && JSON.parse(guardados.get("id:google:novo@gmail.com")).sub === "g-novo",
+    "e-mail novo: a conta nasce com o sub do Google, e o indice fica anotado");
+  g = await irAoGoogle(Q, envG);
+  v = await voltarDoGoogle(g.state, envG, "&error=access_denied");
+  checar(v.local.startsWith(A + "/entrar/?") && !v.local.includes("erro_google") && !v.cookie, "cancelar no Google volta ao pedido, sem erro");
+}
 
 console.log(falhas ? "\n" + falhas + " falha(s)" : "\ntudo certo");
 process.exit(falhas ? 1 : 0);

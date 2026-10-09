@@ -31,6 +31,7 @@
 
 import { aleatorio, deHex, emailValido, hex, iguais, json, kv, lerJson, limparNome, normal, sha256 } from "./comum.js";
 import { enviarEmail } from "./email.js";
+import { googleLigado } from "./google.js";
 
 const ITERACOES = 30000;
 const MIN_SENHA = 10;
@@ -82,7 +83,7 @@ export async function sessaoDe(request, env) {
   return { sub: s.sub, email: s.email, nome: c.nome || "", auth_time: s.auth_time };
 }
 
-async function abrirSessao(env, conta, agora) {
+export async function abrirSessao(env, conta, agora) {
   const segredo = aleatorio(32);
   const auth_time = Math.floor(agora / 1000);
   await env.CONTAS.put("atos:sessao:" + (await sha256(segredo)), JSON.stringify({ sub: conta.sub, email: conta.email, auth_time }), { expirationTtl: SESSAO_S });
@@ -120,7 +121,7 @@ export async function atenderConta(request, env, url, deps = {}) {
 
   if (p === "/api/eu") {
     const s = await sessaoDe(request, env);
-    return json({ conta: s ? { email: s.email, nome: s.nome } : null });
+    return json({ conta: s ? { email: s.email, nome: s.nome } : null, google: googleLigado(env) });
   }
   if (request.method !== "POST") return json({ erro: "use POST" }, 405);
 
@@ -138,7 +139,9 @@ export async function atenderConta(request, env, url, deps = {}) {
 
   if (p === "/api/entrar") {
     if (await bloqueado(env, email)) return json({ erro: BLOQUEADO }, 429);
-    const c = await kv(env, "id:conta:" + email);
+    const lida = await kv(env, "id:conta:" + email);
+    // Conta so com o Google (sem senha) nao entra por senha: "Esqueci a senha" cria uma.
+    const c = lida && lida.hash ? lida : null;
     // Sem conta, o mesmo trabalho de conferir (o tempo nao entrega quem existe).
     const resumo = await resumoDaSenha(String(d.senha || ""), c ? c.sal : "00".repeat(16), c ? c.iteracoes : ITERACOES);
     if (!c || !iguais(resumo, c.hash)) {

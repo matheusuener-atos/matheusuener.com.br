@@ -23,6 +23,7 @@
     <h2>O que a conta Atos guarda</h2>
     <ul>
       <li><strong>O seu e-mail</strong>, que é a própria conta (não criamos endereço @atos.dev.br para ninguém), e <strong>o nome</strong> que você digitou.</li>
+      <li><strong>Se você entra com o Google</strong>: o identificador da sua conta Google, o e-mail confirmado por ele e o nome. A senha do Google não passa pela Atos, e a Atos pede ao Google só isso (nada de e-mail, agenda ou arquivos).</li>
       <li><strong>A senha, só como resumo</strong> (PBKDF2-SHA256 com sal próprio). A senha em si não fica guardada em lugar nenhum, e ninguém consegue lê-la de volta.</li>
       <li><strong>Um identificador da conta</strong>. Se você já entrava no PAVLVS com o Google pelo mesmo e-mail, é o mesmo identificador de lá, para ser a mesma conta.</li>
       <li><strong>As sessões abertas</strong>: só o resumo do código do cookie <code>__Host-atos</code>, por 30 dias.</li>
@@ -42,6 +43,7 @@
     <ul>
       <li><strong>Cloudflare</strong>: hospeda o site e guarda os dados da conta.</li>
       <li><strong>Resend</strong>: entrega os e-mails com os códigos.</li>
+      <li><strong>Google</strong>: só para quem escolhe “Continuar com Google”, confirma quem é você.</li>
     </ul>
     <p>Os dois podem tratar os dados fora do Brasil. Não vendemos dados nem os usamos para publicidade.</p>
 

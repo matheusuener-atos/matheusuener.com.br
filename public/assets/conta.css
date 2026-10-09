@@ -99,3 +99,9 @@ main.texto { max-width: 720px; }
 .texto ul { padding-left: 20px; }
 .texto li + li { margin-top: 6px; }
 .texto code { font-size: 13px; }
+
+/* "Continuar com Google" e o "ou" antes do e-mail e senha */
+.btn.google { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: var(--campo); color: var(--ink); border-color: var(--line); font-weight: 600; }
+.btn.google:hover { border-color: var(--foco); }
+.ou { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--muted); font-size: 12px; }
+.ou::before, .ou::after { content: ""; flex: 1; height: 1px; background: var(--line); }

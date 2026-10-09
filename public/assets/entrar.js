@@ -10,7 +10,17 @@
   var params = new URLSearchParams(consulta);
   var OIDC = params.has("client_id");
   var tela = document.getElementById("tela");
-  var S = { modo: "carregando", email: "", nome: "", erro: "", pedido: null, ocupado: false };
+  var S = { modo: "carregando", email: "", nome: "", erro: params.get("erro_google") || "", pedido: null, ocupado: false, google: false };
+  // O pedido do aplicativo vai junto ao Google e volta (worker/google.js); o erro dele nao.
+  params.delete("erro_google");
+  consulta = OIDC ? (function () { var q = new URLSearchParams(params); return q.toString(); })() : "";
+  var G = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  /* "Continuar com Google" (worker/google.js): so com o Google ligado na Atos. */
+  function comGoogle() {
+    if (!S.google) return "";
+    return '<a class="btn google" href="/oauth/google?consulta=' + encodeURIComponent(consulta) + '">' + G + "<span>Continuar com Google</span></a>" +
+      '<p class="ou"><span>ou com e-mail e senha</span></p>';
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
@@ -43,15 +53,15 @@
       h = "<h1>Não foi possível continuar</h1><p class=\"sub\">" + esc(S.erro) + '</p><p class="pequeno">Volte ao aplicativo e tente de novo. Se continuar, escreva para contato@atos.dev.br.</p>';
     } else if (S.modo === "entrar") {
       h = "<h1>" + (app ? "Entrar com a conta Atos" : "Entrar na conta Atos") + "</h1>" +
-        '<p class="sub">' + (app ? "para continuar no " + esc(app) : "Use o seu e-mail e a sua senha.") + "</p>" +
-        '<form data-form="entrar">' + ERRO() +
+        '<p class="sub">' + (app ? "para continuar no " + esc(app) : "Com o Google ou com o seu e-mail e a sua senha.") + "</p>" +
+        comGoogle() + '<form data-form="entrar">' + ERRO() +
         campo("email", "E-mail", "email", 'autocomplete="username" maxlength="200" required value="' + esc(S.email) + '"') +
         campo("senha", "Senha", "password", 'autocomplete="current-password" maxlength="200" required') +
         botao("Entrar") + '<div class="links">' + link("esqueci", "Esqueci a senha") + link("criar", "Criar conta") + "</div></form>";
     } else if (S.modo === "criar") {
       h = "<h1>Criar a conta Atos</h1>" +
-        '<p class="sub">A conta é o seu próprio e-mail. Vamos mandar um código para confirmar que ele é seu.</p>' +
-        '<form data-form="criar">' + ERRO() +
+        '<p class="sub">A conta é o seu próprio e-mail. Com o Google, ela já sai pronta; com senha, mandamos um código para confirmar que o e-mail é seu.</p>' +
+        comGoogle() + '<form data-form="criar">' + ERRO() +
         campo("nome", "Nome", "text", 'autocomplete="name" maxlength="80" value="' + esc(S.nome) + '"') +
         campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" required value="' + esc(S.email) + '"') +
         campo("senha", "Senha", "password", 'autocomplete="new-password" maxlength="200" required') +
@@ -108,7 +118,8 @@
       if (d.ir) { location.replace(d.ir); return; }
       if (d.erro) { ir("fatal", d.erro); return; }
       S.pedido = d;
-      if (d.entrar) { S.email = S.email || d.dica || (d.conta && d.conta.email) || ""; ir("entrar"); return; }
+      S.google = Boolean(d.google);
+      if (d.entrar) { S.email = S.email || d.dica || (d.conta && d.conta.email) || ""; ir("entrar", S.erro); return; }
       if (d.permitido) { autorizar(true); return; }
       ir("consentir");
     });
@@ -160,8 +171,9 @@
   if (OIDC) pedir();
   else api("/api/eu").then(function (d) {
     var modo = params.get("modo");
-    if (d.conta && !modo) { location.replace("/conta/"); return; }
+    S.google = Boolean(d.google);
+    if (d.conta && !modo && !S.erro) { location.replace("/conta/"); return; }
     if (d.conta) S.email = d.conta.email;
-    ir(modo === "criar" || modo === "esqueci" ? modo : "entrar");
+    ir(modo === "criar" || modo === "esqueci" ? modo : "entrar", S.erro);
   });
 })();
