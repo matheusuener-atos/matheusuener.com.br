@@ -162,3 +162,60 @@ main.texto .coluna { max-width: 720px; }
   main { padding: 32px 16px; }
   .cartao { padding: 20px; }
 }
+
+/* a home (index.html), no mesmo desenho */
+.topo nav a.forte { color: var(--ink); }
+main.home { width: 100%; max-width: 1080px; margin: 0 auto; padding: 112px 32px; align-items: stretch; justify-content: flex-start; gap: 96px; }
+.abertura { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 28px; }
+.coroa.grande { width: 72px; height: 72px; background-size: 72px; margin: 0; }
+.abertura h1 { font-size: 28px; line-height: 1.4; max-width: 36ch; text-wrap: pretty; }
+.chamadas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 4px; }
+.chamadas .trilho a {
+  height: 34px; padding: 0 20px; display: flex; align-items: center; background: var(--btn); border: 1px solid var(--btn-borda);
+  border-radius: 9px; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink);
+}
+.chamadas .trilho a:hover { background: var(--btn-hover); border-color: var(--btn-borda-hover); }
+.chamada { height: 40px; padding: 0 16px; display: flex; align-items: center; color: var(--link); font-size: 14px; font-weight: 500; text-decoration: none; }
+.chamada:hover { color: var(--forte); }
+.bloco { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 24px; }
+.bloco > h2.rotulo { font-weight: 400; margin: 0; padding: 0 4px; }
+
+.produto {
+  width: 100%; max-width: 440px; aspect-ratio: 1.586; display: flex; flex-direction: column; justify-content: space-between; padding: 28px;
+  background: var(--cartao); border: 1px solid var(--linha); text-decoration: none; color: var(--ink);
+}
+.produto:hover { background: var(--g-hover); border-color: var(--btn-borda); color: var(--ink); }
+.produto-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.produto-topo img { width: 48px; height: 48px; border-radius: 12px; }
+.produto-pe { display: flex; flex-direction: column; gap: 8px; }
+.produto-nome { font-family: var(--serif); font-size: 32px; line-height: 1; letter-spacing: .04em; }
+.produto-desc { font-size: 14px; color: var(--link); text-wrap: pretty; }
+
+.indice { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 4px 8px; display: flex; flex-direction: column; }
+.indice a {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 16px; min-height: 72px; padding: 12px;
+  border-top: 1px solid var(--linha-fraca); border-radius: 8px; text-decoration: none; color: var(--ink); scroll-margin-top: 24px;
+}
+.indice a:first-child { border-top: 0; }
+.indice a:hover { background: var(--g-hover); color: var(--ink); }
+.indice .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.indice .t { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.indice .titulo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; font-weight: 500; }
+.indice .desc { font-size: 14px; color: var(--link); }
+.indice .seta { font-size: 18px; color: var(--muted); }
+.novo { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; font-weight: 400; color: var(--ink); border: 1px solid var(--btn-borda); border-radius: 6px; padding: 3px 6px; }
+
+.fundador { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 20px; padding: 24px 4px 0; border-top: 1px solid var(--linha-fraca); }
+.fundador img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--g); }
+.fundador > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fundador p { margin: 0; font-family: var(--serif); font-style: italic; font-size: 19px; line-height: 1.5; color: var(--link); text-wrap: pretty; }
+.assinatura { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.assinatura a { color: var(--muted); text-decoration: none; }
+.assinatura a:hover { color: var(--ink); }
+
+@media (max-width: 640px) {
+  main.home { padding: 64px 16px; gap: 64px; }
+  .abertura h1 { font-size: 24px; }
+  .produto { padding: 22px; }
+  .indice a { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; }
+}
