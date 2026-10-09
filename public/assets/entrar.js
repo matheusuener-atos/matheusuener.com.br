@@ -15,11 +15,11 @@
   params.delete("erro_google");
   consulta = OIDC ? (function () { var q = new URLSearchParams(params); return q.toString(); })() : "";
   var G = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
-  /* "Continuar com Google" (worker/google.js): so com o Google ligado na Atos. */
-  function comGoogle() {
+  /* "Conta Google" embaixo do cartao (worker/google.js): so com o Google ligado na Atos. */
+  function comGoogle(rotulo) {
     if (!S.google) return "";
-    return '<a class="btn google" href="/oauth/google?consulta=' + encodeURIComponent(consulta) + '">' + G + "<span>Continuar com Google</span></a>" +
-      '<p class="ou"><span>ou com e-mail e senha</span></p>';
+    return '<div class="rotulo secao">' + rotulo + "</div>" +
+      '<a class="google" href="/oauth/google?consulta=' + encodeURIComponent(consulta) + '">' + G + "<span>Conta Google</span></a>";
   }
 
   function esc(s) {
@@ -37,68 +37,79 @@
   function nomeDoApp() { return S.pedido && S.pedido.app ? S.pedido.app.nome : ""; }
 
   function campo(nome, rotulo, tipo, extra, classe) {
-    return '<label class="campo' + (classe ? " " + classe : "") + '"><span>' + rotulo + '</span><input name="' + nome + '" type="' + tipo + '" ' + (extra || "") + "></label>";
+    // div e label for, e nao o label em volta: o "Esqueci a senha" ao lado do rotulo e um botao
+    var topo = '<label class="rotulo" for="c-' + nome + '">' + rotulo + "</label>";
+    if (nome === "senha" && S.modo === "entrar") topo = '<span class="topo-campo">' + topo + link("esqueci", "Esqueci a senha") + "</span>";
+    return '<div class="campo' + (classe ? " " + classe : "") + '">' + topo + '<input id="c-' + nome + '" name="' + nome + '" type="' + tipo + '" ' + (extra || "") + "></div>";
   }
   var REGRA = '<p class="nota">Pelo menos 10 caracteres, com letras e números.</p>';
   var ERRO = function () { return '<p class="erro" role="alert">' + esc(S.erro) + "</p>"; };
-  function botao(texto) { return '<div class="botoes"><button type="submit"' + (S.ocupado ? " disabled" : "") + ">" + texto + "</button></div>"; }
-  function link(acao, texto) { return '<button type="button" class="link" data-acao="' + acao + '">' + texto + "</button>"; }
+  var DIS = function () { return S.ocupado ? " disabled" : ""; };
+  function botao(texto) { return '<div class="trilho"><button type="submit"' + DIS() + ">" + texto + "</button></div>"; }
+  function link(acao, texto, forte) { return '<button type="button" class="link' + (forte ? " forte" : "") + '" data-acao="' + acao + '">' + texto + "</button>"; }
+  /* o titulo e o rotulo em mono ficam fora do cartao, como no desenho */
+  function cabeca(titulo, rotulo) { return '<div class="cabeca"><h1>' + titulo + "</h1>" + (rotulo ? '<span class="rotulo">' + rotulo + "</span>" : "") + "</div>"; }
+  function pe(texto, acao, rotulo) { return '<div class="rodape-cartao">' + (texto ? texto + " " : "") + link(acao, rotulo, true) + "</div>"; }
 
   function desenhar() {
     var h = "";
     var app = nomeDoApp();
+    var paraApp = app ? "Para continuar no " + esc(app) : "";
     if (S.modo === "carregando") {
-      h = '<p class="sub">' + (app ? "Voltando ao " + esc(app) + "…" : "Carregando…") + "</p>";
+      h = cabeca(app ? "Voltando ao " + esc(app) + "…" : "Carregando…");
     } else if (S.modo === "fatal") {
-      h = "<h1>Não foi possível continuar</h1><p class=\"sub\">" + esc(S.erro) + '</p><p class="pequeno">Volte ao aplicativo e tente de novo. Se continuar, escreva para contato@atos.dev.br.</p>';
+      h = cabeca("Não foi possível continuar") +
+        '<div class="cartao"><p class="erro" role="alert">' + esc(S.erro) + '</p><p class="pequeno">Volte ao aplicativo e tente de novo. Se continuar, escreva para contato@atos.dev.br.</p></div>';
     } else if (S.modo === "entrar") {
-      h = "<h1>" + (app ? "Entrar com a conta Atos" : "Entrar na conta Atos") + "</h1>" +
-        '<p class="sub">' + (app ? "para continuar no " + esc(app) : "Com o Google ou com o seu e-mail e a sua senha.") + "</p>" +
-        comGoogle() + '<form data-form="entrar">' + ERRO() +
-        campo("email", "E-mail", "email", 'autocomplete="username" maxlength="200" required value="' + esc(S.email) + '"') +
+      h = cabeca(app ? "Entrar com a conta Atos" : "Entrar na conta Atos", paraApp || "Com o e-mail e a senha ou com o Google") +
+        '<form class="cartao" data-form="entrar">' + ERRO() +
+        campo("email", "E-mail", "email", 'autocomplete="username" maxlength="200" placeholder="voce@empresa.com" required value="' + esc(S.email) + '"') +
         campo("senha", "Senha", "password", 'autocomplete="current-password" maxlength="200" required') +
-        botao("Entrar") + '<div class="links">' + link("esqueci", "Esqueci a senha") + link("criar", "Criar conta") + "</div></form>";
+        botao("Entrar") + "</form>" +
+        comGoogle("Ou entrar com a conta Google") + pe("Não tem conta?", "criar", "Criar conta");
     } else if (S.modo === "criar") {
-      h = "<h1>Criar a conta Atos</h1>" +
-        '<p class="sub">A conta é o seu próprio e-mail. Com o Google, ela já sai pronta; com senha, mandamos um código para confirmar que o e-mail é seu.</p>' +
-        comGoogle() + '<form data-form="criar">' + ERRO() +
+      h = cabeca("Criar a conta Atos", paraApp || "A conta é o seu próprio e-mail") +
+        '<form class="cartao" data-form="criar">' +
+        '<p class="texto-cartao">Mandamos um código para confirmar que o e-mail é seu. Com o Google, a conta já sai pronta.</p>' + ERRO() +
         campo("nome", "Nome", "text", 'autocomplete="name" maxlength="80" value="' + esc(S.nome) + '"') +
-        campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" required value="' + esc(S.email) + '"') +
+        campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" placeholder="voce@empresa.com" required value="' + esc(S.email) + '"') +
         campo("senha", "Senha", "password", 'autocomplete="new-password" maxlength="200" required') +
         campo("senha2", "Confirmar a senha", "password", 'autocomplete="new-password" maxlength="200" required') + REGRA +
-        botao("Criar conta") + '<div class="links">' + link("entrar", "Já tenho conta") + "</div></form>";
+        botao("Criar conta") + "</form>" +
+        comGoogle("Ou criar com a conta Google") + pe("Já tem conta?", "entrar", "Entrar");
     } else if (S.modo === "confirmar") {
-      h = "<h1>Confirme o seu e-mail</h1>" +
-        '<p class="sub">Enviamos um código de 6 dígitos para <strong>' + esc(S.email) + "</strong>. Ele vale 15 minutos.</p>" +
-        '<form data-form="confirmar">' + ERRO() +
+      h = cabeca("Confirme o seu e-mail", "Código de 6 dígitos") +
+        '<form class="cartao" data-form="confirmar">' +
+        '<p class="texto-cartao">Enviamos um código para <strong>' + esc(S.email) + "</strong>. Ele vale 15 minutos.</p>" + ERRO() +
         campo("codigo", "Código", "text", 'inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required', "codigo") +
-        botao("Confirmar") + '<div class="links">' + link("criar", "Voltar") + "</div></form>";
+        botao("Confirmar") + "</form>" + pe("", "criar", "Voltar");
     } else if (S.modo === "esqueci") {
-      h = "<h1>Trocar a senha</h1>" +
-        '<p class="sub">Mandamos um código para o seu e-mail. Se você entrava no PAVLVS com o Google, assim você cria uma senha para a mesma conta.</p>' +
-        '<form data-form="esqueci">' + ERRO() +
-        campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" required value="' + esc(S.email) + '"') +
-        botao("Enviar o código") + '<div class="links">' + link("entrar", "Voltar") + "</div></form>";
+      h = cabeca("Trocar a senha", "Um código vai para o seu e-mail") +
+        '<form class="cartao" data-form="esqueci">' +
+        '<p class="texto-cartao">Se você entrava no PAVLVS com o Google, assim você cria uma senha para a mesma conta.</p>' + ERRO() +
+        campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" placeholder="voce@empresa.com" required value="' + esc(S.email) + '"') +
+        botao("Enviar o código") + "</form>" + pe("", "entrar", "Voltar");
     } else if (S.modo === "redefinir") {
-      h = "<h1>Trocar a senha</h1>" +
-        '<p class="sub">Se <strong>' + esc(S.email) + "</strong> tem conta, chegou lá um código de 6 dígitos. Ele vale 15 minutos.</p>" +
-        '<form data-form="redefinir">' + ERRO() +
+      h = cabeca("Trocar a senha", "Código de 6 dígitos") +
+        '<form class="cartao" data-form="redefinir">' +
+        '<p class="texto-cartao">Se <strong>' + esc(S.email) + "</strong> tem conta, chegou lá um código. Ele vale 15 minutos.</p>" + ERRO() +
         campo("codigo", "Código", "text", 'inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required', "codigo") +
         campo("senha", "Nova senha", "password", 'autocomplete="new-password" maxlength="200" required') +
         campo("senha2", "Confirmar a nova senha", "password", 'autocomplete="new-password" maxlength="200" required') + REGRA +
-        botao("Trocar a senha") + '<div class="links">' + link("esqueci", "Voltar") + "</div></form>";
+        botao("Trocar a senha") + "</form>" + pe("", "esqueci", "Voltar");
     } else if (S.modo === "consentir") {
       var p = S.pedido;
-      h = '<div class="app"><img src="' + esc(p.app.icone) + '" alt=""><div><strong>' + esc(p.app.nome) + "</strong><small>" + esc(p.app.descricao) + "</small></div></div>" +
-        "<h1>O " + esc(p.app.nome) + " quer entrar com a sua conta Atos</h1>" +
+      h = cabeca("O " + esc(p.app.nome) + " quer entrar com a sua conta Atos", "Permitir o acesso") +
+        '<div class="cartao">' +
+        '<div class="app"><img src="' + esc(p.app.icone) + '" alt=""><div><strong>' + esc(p.app.nome) + "</strong><small>" + esc(p.app.descricao) + "</small></div></div>" +
         '<div class="quem"><span>' + esc(p.conta.nome ? p.conta.nome + " · " : "") + esc(p.conta.email) + "</span>" + link("trocar", "Trocar de conta") + "</div>" +
-        '<p class="aviso">Ao permitir, o ' + esc(p.app.nome) + " poderá:</p>" +
+        '<span class="rotulo">Ao permitir, o ' + esc(p.app.nome) + " poderá</span>" +
         '<ul class="permissoes">' + p.escopos.map(function (e) { return "<li>" + esc(e.texto) + "</li>"; }).join("") + "</ul>" +
         '<p class="pequeno">O ' + esc(p.app.nome) + " não recebe a sua senha. Você pode tirar essa permissão quando quiser, em atos.dev.br/conta. " +
         "Veja como o " + esc(p.app.nome) + ' trata os seus dados na <a href="' + esc(p.app.privacidade) + '" target="_blank" rel="noopener">política de privacidade</a> e nos ' +
         '<a href="' + esc(p.app.termos) + '" target="_blank" rel="noopener">termos de uso</a> dele.</p>' +
-        ERRO() + '<div class="botoes"><button type="button" class="secundario" data-acao="negar"' + (S.ocupado ? " disabled" : "") + ">Cancelar</button>" +
-        '<button type="button" data-acao="permitir"' + (S.ocupado ? " disabled" : "") + ">Permitir</button></div>";
+        ERRO() + '<div class="trilho"><button type="button" class="secundario" data-acao="negar"' + DIS() + ">Cancelar</button>" +
+        '<button type="button" data-acao="permitir"' + DIS() + ">Permitir</button></div></div>";
     }
     tela.innerHTML = h;
     var foco = tela.querySelector("input:not([value]), input[value=''], input[name=senha], input[name=codigo]") || tela.querySelector("input");

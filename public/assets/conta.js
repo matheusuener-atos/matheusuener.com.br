@@ -26,7 +26,7 @@
         return '<li><img src="' + esc(a.icone) + '" alt=""><div><strong>' + esc(a.nome) + "</strong><small>" +
           esc(a.escopos.join(" · ")) + "</small><small>" + (a.quando ? "Permitido em " + data(a.quando) : "") +
           (a.ultimo ? " · último acesso em " + data(a.ultimo) : "") + "</small></div>" +
-          '<button type="button" class="secundario" data-app="' + esc(a.id) + '">Tirar o acesso</button></li>';
+          '<div class="trilho"><button type="button" data-app="' + esc(a.id) + '">Tirar o acesso</button></div></li>';
       }).join("");
     });
   }

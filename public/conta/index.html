@@ -11,31 +11,54 @@
 <script src="/assets/conta.js" defer></script>
 </head>
 <body>
-<a class="marca" href="/">Atos</a>
+<header class="topo">
+  <a class="marca" href="/">Atos</a>
+  <nav aria-label="Principal">
+    <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">PROJETOS</a>
+    <a href="/#escritos">ESCRITOS</a>
+    <a href="/#carta">CARTA</a>
+    <a href="/#contato">CONTATO</a>
+    <a href="/entrar/" aria-current="page">ENTRAR</a>
+  </nav>
+</header>
 <main id="conta" hidden>
-  <section class="cartao">
-    <h1 id="c-nome">Sua conta</h1>
-    <p class="sub" id="c-email"></p>
-    <div class="links">
-      <a class="link" href="/entrar/?modo=esqueci">Trocar a senha</a>
-      <button type="button" class="link" id="c-sair">Sair</button>
+  <div class="coluna">
+    <span class="coroa" aria-hidden="true"></span>
+    <div class="cabeca">
+      <h1 id="c-nome">Sua conta</h1>
+      <span class="rotulo" id="c-email"></span>
     </div>
-  </section>
-  <section class="cartao">
-    <h2>Aplicativos com acesso</h2>
-    <p class="pequeno">Os aplicativos em que você entrou com a conta Atos. Tirar o acesso faz o aplicativo pedir a sua permissão de novo na próxima vez; para sair dele agora, saia também dentro do aplicativo.</p>
-    <p class="erro" id="c-erro" role="alert"></p>
-    <ul class="lista" id="c-apps"></ul>
-  </section>
-  <section class="cartao">
-    <h2>Excluir a conta</h2>
-    <p class="pequeno">Escreva, deste e-mail, para contato@atos.dev.br pedindo a exclusão. Se você assina o PAVLVS, cancele a assinatura antes, em paulus.ia.br/minha-conta.</p>
-  </section>
+    <section class="cartao">
+      <div class="acoes">
+        <a class="link forte" href="/entrar/?modo=esqueci">Trocar a senha</a>
+        <button type="button" class="link" id="c-sair">Sair</button>
+      </div>
+    </section>
+
+    <div class="rotulo secao">APLICATIVOS COM ACESSO</div>
+    <section class="cartao">
+      <p class="pequeno">Os aplicativos em que você entrou com a conta Atos. Tirar o acesso faz o aplicativo pedir a sua permissão de novo na próxima vez; para sair dele agora, saia também dentro do aplicativo.</p>
+      <p class="erro" id="c-erro" role="alert"></p>
+      <ul class="lista" id="c-apps"></ul>
+    </section>
+
+    <div class="rotulo secao">EXCLUIR A CONTA</div>
+    <section class="cartao">
+      <p class="pequeno">Escreva, deste e-mail, para contato@atos.dev.br pedindo a exclusão. Se você assina o PAVLVS, cancele a assinatura antes, em paulus.ia.br/minha-conta.</p>
+    </section>
+  </div>
 </main>
-<footer>
-  <a href="/privacidade/">Privacidade</a>
-  <a href="/termos/">Termos</a>
-  <span>contato@atos.dev.br</span>
+<footer class="rodape">
+  <div>
+    <a href="mailto:contato@atos.dev.br">CONTATO@ATOS.DEV.BR</a>
+    <a href="https://wa.me/5594988067392" target="_blank" rel="noopener">+55 (94) 98806-7392</a>
+  </div>
+  <span class="lema">ACTS OF THE APOSTLES · PRODUCT ENGINEERING · SYSTEMS DEVELOPMENT</span>
+  <div>
+    <a href="/privacidade/">PRIVACIDADE</a>
+    <a href="/termos/">TERMOS</a>
+    <a href="https://paulus.ia.br" target="_blank" rel="noopener">PAVLVS</a>
+  </div>
 </footer>
 </body>
 </html>
