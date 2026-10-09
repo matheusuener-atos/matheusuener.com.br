@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sua conta · Atos</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/conta.css">
+<script src="/assets/tema.js"></script>
+<script src="/assets/conta.js" defer></script>
+</head>
+<body>
+<a class="marca" href="/">Atos</a>
+<main id="conta" hidden>
+  <section class="cartao">
+    <h1 id="c-nome">Sua conta</h1>
+    <p class="sub" id="c-email"></p>
+    <div class="links">
+      <a class="link" href="/entrar/?modo=esqueci">Trocar a senha</a>
+      <button type="button" class="link" id="c-sair">Sair</button>
+    </div>
+  </section>
+  <section class="cartao">
+    <h2>Aplicativos com acesso</h2>
+    <p class="pequeno">Os aplicativos em que você entrou com a conta Atos. Tirar o acesso faz o aplicativo pedir a sua permissão de novo na próxima vez; para sair dele agora, saia também dentro do aplicativo.</p>
+    <p class="erro" id="c-erro" role="alert"></p>
+    <ul class="lista" id="c-apps"></ul>
+  </section>
+  <section class="cartao">
+    <h2>Excluir a conta</h2>
+    <p class="pequeno">Escreva, deste e-mail, para contato@atos.dev.br pedindo a exclusão. Se você assina o PAVLVS, cancele a assinatura antes, em paulus.ia.br/minha-conta.</p>
+  </section>
+</main>
+<footer>
+  <a href="/privacidade/">Privacidade</a>
+  <a href="/termos/">Termos</a>
+  <span>contato@atos.dev.br</span>
+</footer>
+</body>
+</html>

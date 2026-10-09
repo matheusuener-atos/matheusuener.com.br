@@ -1,0 +1,35 @@
+// O site da Atos (atos.dev.br) e a conta Atos ("Entrar com Atos"), num Worker
+// so: a pasta public/ e o worker/. Publicado com "npx wrangler deploy".
+//
+// Segredos (npx wrangler secret put <NOME>):
+//   ATOS_CHAVE      a JWK privada que assina os id_token (tools/gerar-chave.mjs)
+//   RESEND_API_KEY  o envio dos codigos por e-mail (dominio atos.dev.br verificado no Resend)
+{
+  "name": "atos",
+  "compatibility_date": "2026-09-25",
+  "main": "worker/index.js",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+    // Tudo passa pelo Worker: os cabecalhos de seguranca e o 301 de
+    // matheusuener.com.br saem dele.
+    "run_worker_first": true
+  },
+  "routes": [
+    { "pattern": "atos.dev.br", "custom_domain": true },
+    { "pattern": "www.atos.dev.br", "custom_domain": true }
+    // matheusuener.com.br (o 301 para atos.dev.br ja esta no worker/index.js):
+    // entra aqui depois que os registros DNS do GitHub Pages sairem do
+    // Cloudflare - com eles, o deploy recusa o dominio (codigo 100117).
+    // { "pattern": "matheusuener.com.br", "custom_domain": true },
+    // { "pattern": "www.matheusuener.com.br", "custom_domain": true }
+  ],
+  // As contas: o MESMO namespace do KV APOIOS do Worker do PAVLVS (paulus.ia.br).
+  // As chaves "id:*" (as contas, como o PAVLVS ja as criava) sao das duas; as
+  // "atos:*" (sessoes, permissoes, codigos e tokens) so deste Worker.
+  "kv_namespaces": [{ "binding": "CONTAS", "id": "c8011a70799b40b0b3215f4a01b2d28c" }],
+  "ratelimits": [{ "name": "LIMITE", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],
+  "observability": { "enabled": true }
+}

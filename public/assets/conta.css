@@ -1,0 +1,101 @@
+/* As paginas da conta Atos (/entrar e /conta). Sem fonte de fora: a marca e
+   Times New Roman, o texto e a fonte do sistema. As cores sao as da pagina da
+   Atos (styles.css), claro e escuro. */
+:root {
+  --bg: #faf9f6;
+  --cartao: #ffffff;
+  --ink: #1c1c1a;
+  --lead: #3c3b37;
+  --muted: #6b6b65;
+  --line: rgba(0, 0, 0, .12);
+  --campo: #ffffff;
+  --foco: #1c1c1a;
+  --primario: #1c1c1a;
+  --primario-ink: #faf9f6;
+  --erro: #a3271f;
+  --ok: #2f6b3a;
+  --serif: "Times New Roman", Times, "Liberation Serif", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131312; --cartao: #1a1a19; --ink: #f2f1ec; --lead: #dcdad2; --muted: #a8a69e; --line: rgba(242, 241, 236, .14);
+    --campo: #131312; --foco: #d8d8d8; --primario: #d8d8d8; --primario-ink: #131312; --erro: #f08a80; --ok: #8fd19c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131312; --cartao: #1a1a19; --ink: #f2f1ec; --lead: #dcdad2; --muted: #a8a69e; --line: rgba(242, 241, 236, .14);
+  --campo: #131312; --foco: #d8d8d8; --primario: #d8d8d8; --primario-ink: #131312; --erro: #f08a80; --ok: #8fd19c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans);
+  display: flex; flex-direction: column; align-items: center; padding: 48px 16px 32px;
+}
+a { color: inherit; }
+.marca { font-family: var(--serif); font-size: 44px; line-height: 1; text-decoration: none; color: var(--ink); margin-bottom: 32px; letter-spacing: .5px; }
+main { width: 100%; max-width: 420px; }
+.cartao { background: var(--cartao); border: 1px solid var(--line); border-radius: 10px; padding: 28px 24px; }
+h1 { font-family: var(--serif); font-weight: 400; font-size: 28px; line-height: 1.15; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 22px; }
+.campo { display: block; margin-bottom: 14px; }
+.campo span { display: block; font-size: 13px; color: var(--lead); margin-bottom: 5px; }
+.campo input {
+  width: 100%; font: inherit; color: var(--ink); background: var(--campo); border: 1px solid var(--line);
+  border-radius: 6px; padding: 10px 12px;
+}
+.campo input:focus { outline: 2px solid var(--foco); outline-offset: 1px; border-color: transparent; }
+.campo.codigo input { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 6px; text-align: center; }
+.nota { font-size: 13px; color: var(--muted); margin: -6px 0 14px; }
+.erro { color: var(--erro); font-size: 14px; margin: 0 0 14px; }
+.erro:empty { display: none; }
+.aviso { font-size: 14px; color: var(--lead); margin: 0 0 16px; }
+.botoes { display: flex; gap: 10px; margin-top: 18px; }
+.botoes > * { flex: 1; }
+button, .btn {
+  font: inherit; font-weight: 600; border-radius: 6px; padding: 11px 16px; cursor: pointer; border: 1px solid var(--primario);
+  background: var(--primario); color: var(--primario-ink); text-align: center; text-decoration: none;
+}
+button.secundario { background: transparent; color: var(--ink); border-color: var(--line); }
+button[disabled] { opacity: .6; cursor: progress; }
+.links { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.link { background: none; border: 0; padding: 0; color: var(--ink); font-weight: 400; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 14px; }
+
+/* o consentimento */
+.app { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.app img { width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--line); }
+.app strong { display: block; font-size: 17px; }
+.app small { color: var(--muted); }
+.quem { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 0 0 18px; font-size: 14px; overflow-wrap: anywhere; }
+.permissoes { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--line); }
+.permissoes li { padding: 11px 0 11px 26px; border-bottom: 1px solid var(--line); position: relative; }
+.permissoes li::before { content: ""; position: absolute; left: 4px; top: 18px; width: 9px; height: 5px; border-left: 2px solid var(--ok); border-bottom: 2px solid var(--ok); transform: rotate(-45deg); }
+.pequeno { font-size: 13px; color: var(--muted); }
+.pequeno a { color: var(--lead); }
+
+/* a pagina /conta */
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista li { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.lista li img { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line); }
+.lista li div { flex: 1; min-width: 0; }
+.lista li small { display: block; color: var(--muted); }
+.vazio { color: var(--muted); }
+section + section { margin-top: 16px; }
+h2 { font-family: var(--serif); font-weight: 400; font-size: 21px; margin: 0 0 12px; }
+
+footer { margin-top: 28px; font-size: 12px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+footer a { color: var(--muted); }
+[hidden] { display: none !important; }
+
+/* a privacidade e os termos */
+main.texto { max-width: 720px; }
+.texto h2 { margin-top: 26px; }
+.texto p, .texto li { color: var(--lead); }
+.texto ul { padding-left: 20px; }
+.texto li + li { margin-top: 6px; }
+.texto code { font-size: 13px; }

@@ -19,7 +19,7 @@
   --primary-hover: #000;
   --outer: #e9e7e0;
 
-  --serif: 'EB Garamond', Georgia, serif;
+  --serif: 'Times New Roman', Times, 'Liberation Serif', serif;
   --sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
 
@@ -118,10 +118,11 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.5; strok
 }
 
 .brand {
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .3em;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .01em;
 }
 
 .nav {
@@ -371,7 +372,7 @@ h1 {
   :root { --gutter: 24px; }
 
   .topbar { padding: 18px var(--gutter); }
-  .brand { font-size: 12px; }
+  .brand { font-size: 26px; }
 
   .menu-btn { display: grid; }
 
