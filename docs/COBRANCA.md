@@ -110,12 +110,24 @@ Decisão do dono, 09/10/2026: "criar tudo no Mercado Pago exclusivo Atos, e os s
   - **a conta passa a ser cobrada pela Atos** (`cobrador: "atos"`): os ciclos rolam até o "pago até"; o tempo que o PAVLVS já tinha cobrado fica; a assinatura antiga do Mercado Pago do PAVLVS é cancelada;
   - **as rotas de dinheiro do PAVLVS** (site, PAULUS instalado, Minha conta, painel) recusam a conta da Atos com 409 `cobranca_na_atos`, que manda a `atos.dev.br/conta`;
   - **a conta fora de dia pergunta à Atos** (a reserva), no máximo a cada 10 minutos.
-- **Falta, nesta ordem:**
-  1. **do dono:** o mesmo segredo `EVENTOS_SEGREDO_PAVLVS` nos dois Workers (`npx wrangler secret put EVENTOS_SEGREDO_PAVLVS` em C:\atos e em C:\coryphaeus), o deploy dos dois e o webhook no app;
-  2. **o teste de ponta a ponta** com as credenciais de teste do app (aba Teste) e um comprador de teste;
-  3. **abrir o PAVLVS** (`PRODUTOS_ABERTOS=pavlvs`) e juntar o branch `pavlvs-checkout-atos` do coryphaeus (o "Assinar" dos planos levando a esta tela);
-  4. **as seções da `/conta`** lendo daqui (o plano, as faturas, pausar e cancelar; hoje a Minha conta do PAVLVS só diz que é na Atos);
-  5. **a devolução no painel**;
-  6. **a NFS-e.**
+- **Feito em 10/10/2026 — as vendas do PAVLVS abertas:**
+  - **o teste ponta a ponta** no Worker de teste (`npx wrangler deploy --env teste`, https://atos-teste.matheusuener-atos.workers.dev), com as credenciais da aba Teste e o comprador de teste:
+    - assinatura no cartão;
+    - o ano no cartão, duas vezes, somando;
+    - Pix;
+    - cancelar;
+    - nunca cobrar em dobro;
+    - o webhook simulado (200);
+    - os avisos entregues;
+  - **a Minha conta lendo daqui**: Assinaturas (pausar, reativar, cancelar), Faturamento (as compras e as mensalidades), Carteira (a bandeira) e Dados (o perfil fiscal); GET /api/cobranca/v1/conta;
+  - **`PRODUTOS_ABERTOS=pavlvs`**, e no PAVLVS `COBRANCA_PELA_ATOS=1`:
+    - o Assinar, o "Fazer upgrade" e o /cadastro antigo levam a este checkout;
+    - nenhuma cobrança nova nasce no Mercado Pago do PAVLVS;
+  - **a contagem de visitas da Cloudflare** só nas páginas públicas, e a política de privacidade de 10/10.
+- **Falta:**
+  1. **a NFS-e automática dos pagamentos da Atos** (hoje a nota é emitida à mão; a tela de faturas avisa);
+  2. **trocar o cartão pela Minha conta** (POST /api/subscriptions/:id/cartao, com PUT /preapproval card_token_id; hoje é por contato@);
+  3. **a devolução no painel**;
+  4. **ver uma cobrança mensal recorrente de verdade** (no teste a assinatura foi cancelada antes da primeira; o caminho até o direito é o mesmo do ano, que funcionou).
 
-Cada etapa vai ao ar com os testes passando e sem quebrar a anterior. Não há assinante real hoje (uma conta só, a do dono), então não há assinatura antiga do Mercado Pago para carregar.
+Cada etapa vai ao ar com os testes passando e sem quebrar a anterior. Antes da abertura não havia assinante real (uma conta só, a do dono, cortesia), então não houve assinatura antiga do Mercado Pago para carregar.
