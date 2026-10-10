@@ -208,6 +208,12 @@ async function situacaoDoProduto(meu, produto) {
   return { viva, pagoAte, plano: dir && dir.plano };
 }
 
+/* Quem paga, para o Mercado Pago: o e-mail dos dados fiscais. No Worker de teste, o comprador de teste
+   (MP_PAGADOR_TESTE): com as credenciais de teste, o Mercado Pago so aceita pagador que tambem e de teste. */
+function pagadorDe(env, perfil) {
+  return ehAmbienteDeTeste(env) && env.MP_PAGADOR_TESTE ? String(env.MP_PAGADOR_TESTE) : perfil.email;
+}
+
 const dataBR = (iso) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
 /* As regras de uma cobranca de periodo (mes ou ano), para nunca cobrar em dobro nem deixar o plano ambiguo:
