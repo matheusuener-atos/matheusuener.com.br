@@ -131,6 +131,17 @@ r = await chamar("/pavlvs/assinar/");
 const csp = r.r.headers.get("content-security-policy") || "";
 checar(/script-src 'self' https:\/\/sdk\.mercadopago\.com/.test(csp) && /'sha256-[A-Za-z0-9+/=]+'/.test(csp) && !/script-src[^;]*unsafe-inline/.test(csp) && /frame-ancestors 'none'/.test(csp),
   "a tela do checkout: o SDK do Mercado Pago, o script dela pelo hash, sem unsafe-inline no script", csp);
+{
+  // O navegador que ja tem a pagina pergunta se mudou (If-None-Match): os assets responderiam 304 sem corpo, e a
+  // CSP sairia sem hash, bloqueando o script da copia guardada. O checkout sempre manda a pagina inteira.
+  const envCache = { ...env, ASSETS: { fetch: async (req) => req.headers.get("if-none-match")
+    ? new Response(null, { status: 304, headers: { etag: '"v1"' } })
+    : env.ASSETS.fetch(req) } };
+  const w = await worker.fetch(new Request(A + "/pavlvs/assinar/", { headers: { "if-none-match": '"v1"' } }), envCache, {});
+  const corpo = await w.text();
+  checar(w.status === 200 && corpo.includes("<script") && /'sha256-/.test(w.headers.get("content-security-policy") || "") && !w.headers.get("etag"),
+    "com If-None-Match: a pagina inteira (200), com o hash, e sem ETag para o proximo pedido", { status: w.status, etag: w.headers.get("etag") });
+}
 
 console.log("sem sessao, sem cobranca");
 r = await chamar("/api/cobranca/v1/assinar", { metodo: "POST", corpo: { preco: "pavlvs.escritorio.mes", token: "x".repeat(32) }, semCookie: true });

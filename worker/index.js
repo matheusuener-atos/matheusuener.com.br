@@ -67,6 +67,9 @@ async function comCspDoCheckout(resposta) {
     hashes.push("'sha256-" + btoa(String.fromCharCode(...new Uint8Array(h))) + "'");
   }
   const r = new Response(html, resposta);
+  // Sem validador de cache: o navegador nao tem como pedir o 304 desta pagina.
+  r.headers.delete("etag");
+  r.headers.delete("last-modified");
   r.headers.set("content-security-policy", CSP_CHECKOUT(hashes));
   r.headers.set("x-frame-options", "DENY");
   r.headers.set("referrer-policy", "strict-origin-when-cross-origin");
@@ -123,7 +126,11 @@ export default {
     if (url.pathname.startsWith("/api/")) return json({ erro: "rota não existe" }, 404);
     // O checkout de cada produto (public/<produto>/assinar/).
     if (/^\/[a-z0-9-]+\/assinar\/?$/.test(url.pathname)) {
-      const r = await env.ASSETS.fetch(request);
+      // Sempre a pagina inteira, nunca o 304: a CSP leva o hash do script que vai junto, e um 304 (sem corpo)
+      // sairia sem hash nenhum, e o navegador bloquearia o script da copia que ja tinha.
+      const semCondicao = new Headers(request.headers);
+      for (const h of ["if-none-match", "if-modified-since", "if-match", "if-range"]) semCondicao.delete(h);
+      const r = await env.ASSETS.fetch(new Request(request.url, { method: request.method, headers: semCondicao }));
       return (r.headers.get("content-type") || "").includes("text/html") ? comCspDoCheckout(r) : comCabecalhos(r);
     }
     const conta = /^\/(entrar|conta)(\/|$)/.test(url.pathname);
