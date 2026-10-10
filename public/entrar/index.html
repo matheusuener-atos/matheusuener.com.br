@@ -12,16 +12,15 @@
 </head>
 <body>
 <header class="topo">
-  <a class="marca" href="/">Atos</a>
+  <a class="marca" href="/" aria-label="Atos, página inicial">Atos</a>
   <nav aria-label="Principal">
-    <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">PROJETOS</a>
-    <a href="/#escritos">ESCRITOS</a>
-    <a href="/#carta">CARTA</a>
-    <a href="/#rodape">CONTATO</a>
-    <a href="/entrar/" aria-current="page">ENTRAR</a>
+    <a href="/#projetos">Projetos</a>
+    <a href="/#indice">Escritos</a>
+    <a href="/#indice">Carta</a>
+    <a href="/entrar/" class="forte" data-conta aria-current="page">Entrar</a>
   </nav>
 </header>
-<main>
+<main class="entrar">
   <div class="coluna">
     <span class="coroa" aria-hidden="true"></span>
     <div class="pilha" id="tela" aria-live="polite">
@@ -29,18 +28,20 @@
     </div>
   </div>
 </main>
-<footer class="rodape">
+<footer class="rodape" id="rodape">
+  <span>Atos</span>
   <div>
-    <a href="mailto:contato@atos.dev.br">CONTATO@ATOS.DEV.BR</a>
-    <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
-  </div>
-  <span class="lema">ACTS OF THE APOSTLES · PRODUCT ENGINEERING · SYSTEMS DEVELOPMENT</span>
-  <div>
-    <a href="/privacidade/">PRIVACIDADE</a>
-    <a href="/termos/">TERMOS</a>
-    <a href="https://paulus.ia.br" target="_blank" rel="noopener">PAVLVS</a>
+    <details>
+      <summary>Contato</summary>
+      <div>
+        <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>
+        <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
+      </div>
+    </details>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/termos/">Termos</a>
   </div>
 </footer>
-<noscript><p>Para entrar na conta Atos, ative o JavaScript neste navegador.</p></noscript>
+<noscript><p class="nota" style="text-align:center;padding:16px">Para entrar na conta Atos, ative o JavaScript neste navegador.</p></noscript>
 </body>
 </html>

@@ -10,6 +10,7 @@ import { EMISSOR, dentroDoLimite, json } from "./comum.js";
 import { atenderConta, ehRotaDaConta } from "./contas.js";
 import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
 import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
+import { atenderCobranca, ehRotaDaCobranca } from "./cobranca.js";
 
 const CSP_CONTA = [
   "default-src 'self'",
@@ -60,6 +61,10 @@ export default {
         if (url.pathname.startsWith("/api/") && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderOIDC(request, env, url, { dentroDoLimite }));
       }
+      if (ehRotaDaCobranca(url)) {
+        if (!mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
+        return comCabecalhos(await atenderCobranca(request, env, url));
+      }
       if (ehRotaDaConta(url)) {
         if (!mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderConta(request, env, url, { dentroDoLimite }));
@@ -69,6 +74,10 @@ export default {
     }
     if (url.pathname.startsWith("/api/")) return json({ erro: "rota não existe" }, 404);
     const conta = /^\/(entrar|conta)(\/|$)/.test(url.pathname);
+    // Cada secao da Minha conta tem o proprio endereco; a pagina e uma so.
+    if (/^\/conta\/(dados|assinaturas|faturamento|carteira)\/?$/.test(url.pathname)) {
+      return comCabecalhos(await env.ASSETS.fetch(new Request(new URL("/conta/", url), request)), true);
+    }
     return comCabecalhos(await env.ASSETS.fetch(request), conta);
   },
 };

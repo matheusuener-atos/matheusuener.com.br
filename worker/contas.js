@@ -17,6 +17,7 @@
 //   POST /api/redefinir  {email, codigo, senha}  troca a senha e abre a sessao
 //   POST /api/sair                               fecha a sessao deste navegador
 //   GET  /api/eu                                 {conta: {email, nome} | null}
+//   POST /api/nome       {nome}                  troca o nome de quem esta dentro
 //
 // A sessao: um segredo aleatorio no cookie __Host-atos (HttpOnly, Secure,
 // SameSite=Lax), e no KV so o SHA-256 dele ("atos:sessao:<hash>"), 30 dias.
@@ -111,7 +112,7 @@ const BLOQUEADO = "muitas tentativas erradas com este e-mail: espere 15 minutos 
 // ---------------------------------------------------------------- as rotas
 
 export function ehRotaDaConta(url) {
-  return ["/api/entrar", "/api/cadastrar", "/api/confirmar", "/api/esqueci", "/api/redefinir", "/api/sair", "/api/eu"].includes(url.pathname);
+  return ["/api/entrar", "/api/cadastrar", "/api/confirmar", "/api/esqueci", "/api/redefinir", "/api/sair", "/api/eu", "/api/nome"].includes(url.pathname);
 }
 
 export async function atenderConta(request, env, url, deps = {}) {
@@ -134,6 +135,19 @@ export async function atenderConta(request, env, url, deps = {}) {
   if (deps.dentroDoLimite && !(await deps.dentroDoLimite(request, env))) return json({ erro: "muitas tentativas seguidas - espere um minuto" }, 429);
   const d = await lerJson(request);
   if (!d) return json({ erro: "pedido inválido" }, 400);
+
+  // O nome da conta (Minha conta > Resumo > Editar): so o de quem esta dentro.
+  if (p === "/api/nome") {
+    const s = await sessaoDe(request, env);
+    if (!s) return json({ erro: "entre na sua conta" }, 401);
+    const nome = limparNome(d.nome);
+    if (nome.length < 2) return json({ erro: "diga o seu nome" }, 400);
+    const c = await kv(env, "id:conta:" + s.email);
+    if (!c || c.sub !== s.sub) return json({ erro: "entre na sua conta" }, 401);
+    await env.CONTAS.put("id:conta:" + s.email, JSON.stringify({ ...c, nome }));
+    return json({ ok: true, conta: { email: s.email, nome } });
+  }
+
   const email = normal(d.email);
   if (!emailValido(email)) return json({ erro: "confira o e-mail" }, 400);
 

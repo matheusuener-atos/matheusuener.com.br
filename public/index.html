@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Atos</title>
-<meta name="description" content="Atos é uma empresa de desenvolvimento de softwares e engenharia de produtos, de Matheus Uener. É a dona do PAVLVS.">
-<meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#faf9f6" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#131312" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Atos projeta e constrói software do problema à entrega. Empresa de desenvolvimento de softwares e engenharia de produtos de Matheus Uener, dona do PAVLVS.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080707">
 <meta property="og:title" content="Atos">
-<meta property="og:description" content="Empresa de desenvolvimento de softwares e engenharia de produtos.">
+<meta property="og:description" content="Projetamos e construímos software do problema à entrega, com o mesmo cuidado em cada etapa.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://atos.dev.br/">
 <meta property="og:image" content="https://atos.dev.br/foto-atos.jpg">
@@ -17,95 +16,107 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/conta.css">
 <script src="/assets/tema.js"></script>
+<script src="/assets/topo.js" defer></script>
 </head>
 <body>
 <header class="topo">
   <a class="marca" href="/" aria-label="Atos, página inicial">Atos</a>
   <nav aria-label="Principal">
-    <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">PROJETOS</a>
-    <a href="#escritos">ESCRITOS</a>
-    <a href="#carta">CARTA</a>
-    <a href="#rodape">CONTATO</a>
-    <a href="/entrar/" class="forte">ENTRAR</a>
+    <a href="#projetos">Projetos</a>
+    <a href="#indice">Escritos</a>
+    <a href="#indice">Carta</a>
+    <a href="/entrar/" class="forte" data-conta>Entrar</a>
   </nav>
 </header>
 
 <main class="home">
   <section class="abertura">
-    <span class="coroa grande" aria-hidden="true"></span>
-    <span class="rotulo">ACTS OF THE APOSTLES · PRODUCT ENGINEERING · SYSTEMS DEVELOPMENT</span>
-    <h1>Empresa de desenvolvimento de softwares e engenharia de produtos. O nome é uma referência ao livro dos Atos dos Apóstolos.</h1>
+    <span class="lema">Acts of the Apostles · Product Engineering · Systems Development</span>
+    <h1>Projetamos e construímos software do problema à entrega, com o mesmo cuidado em cada etapa.</h1>
     <div class="chamadas">
-      <div class="trilho"><a href="#indice">Conhecer a Atos</a></div>
-      <a class="chamada" href="https://wa.me/5594992417837?text=Ol%C3%A1%2C%20Matheus!%20Gostaria%20de%20agendar%20uma%20conversa." target="_blank" rel="noopener">Agendar uma conversa</a>
+      <a class="btn primario" href="https://wa.me/5594992417837?text=Ol%C3%A1%2C%20Matheus!%20Gostaria%20de%20agendar%20uma%20conversa." target="_blank" rel="noopener">Agendar uma conversa</a>
+      <a class="btn" href="#projetos">Conhecer a Atos<span class="seta" aria-hidden="true">→</span></a>
     </div>
   </section>
 
-  <section class="bloco">
-    <h2 class="rotulo">PRODUTO</h2>
-    <a class="produto" href="https://paulus.ia.br" target="_blank" rel="noopener">
-      <span class="produto-topo">
-        <img src="/assets/paulus-p.png" alt="" width="48" height="48">
-        <span class="rotulo">PAULUS.IA.BR →</span>
-      </span>
-      <span class="produto-pe">
-        <span class="produto-nome">PAVLVS</span>
-        <span class="produto-desc">O assistente jurídico para escritórios de advocacia</span>
-      </span>
-    </a>
+  <section id="projetos">
+    <h2 class="titulo-secao">Projetos</h2>
+    <div class="projetos">
+      <article class="projeto">
+        <div>
+          <div class="cab"><h3>PAVLVS</h3><span>Windows</span></div>
+          <p>O assistente jurídico para escritórios de advocacia</p>
+        </div>
+        <div class="acoes-projeto">
+          <a href="https://paulus.ia.br" target="_blank" rel="noopener">Site<span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/matheusuener-atos/coryphaeus/releases/latest" target="_blank" rel="noopener">Download<span aria-hidden="true">↓</span></a>
+        </div>
+      </article>
+      <article class="projeto">
+        <div>
+          <div class="cab"><h3>Coryphaeus</h3><span>Python</span></div>
+          <p>Agent OS for orchestrating local AI agents and tools</p>
+        </div>
+        <div class="acoes-projeto">
+          <a href="https://github.com/matheusuener-atos/coryphaeus" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
+        </div>
+      </article>
+      <article class="projeto">
+        <div>
+          <div class="cab"><h3>Plantare Maps</h3><span>HTML</span></div>
+          <p>Gerador de mapas agrícola para planio/pulverização: do KMZ do talhão ao plano com bordadura, linhas, manobras e exportação em KMZ/Shapefile.</p>
+        </div>
+        <div class="acoes-projeto">
+          <a href="https://github.com/matheusuener-atos/plantare-maps" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
+        </div>
+      </article>
+    </div>
   </section>
 
-  <section class="bloco" id="indice">
-    <h2 class="rotulo">ÍNDICE</h2>
+  <section id="indice">
+    <h2 class="titulo-secao">Índice</h2>
     <nav class="indice" aria-label="Índice">
       <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">
-        <span class="n">01</span>
-        <span class="t"><span class="titulo">Conhecer portfólio <span class="novo">NOVO</span></span><span class="desc">O projeto em detalhe</span></span>
+        <span class="n">I</span>
+        <span class="t"><span class="titulo">Conhecer portfólio</span><span class="desc">O projeto em detalhe</span><span class="novo">Novo</span></span>
         <span class="seta" aria-hidden="true">→</span>
       </a>
       <a id="carta" href="mailto:contato@atos.dev.br?subject=Quero%20receber%20a%20carta%20semanal">
-        <span class="n">02</span>
+        <span class="n">II</span>
         <span class="t"><span class="titulo">Carta semanal</span><span class="desc">Um e-mail por semana sobre o processo</span></span>
         <span class="seta" aria-hidden="true">→</span>
       </a>
       <a id="escritos" href="#escritos">
-        <span class="n">03</span>
+        <span class="n">III</span>
         <span class="t"><span class="titulo">Escritos</span><span class="desc">O que aprendo construindo</span></span>
         <span class="seta" aria-hidden="true">→</span>
       </a>
-      <a href="#rodape">
-        <span class="n">04</span>
+      <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">
+        <span class="n">IV</span>
         <span class="t"><span class="titulo">Contatos</span><span class="desc">WhatsApp, e-mail e GitHub</span></span>
         <span class="seta" aria-hidden="true">→</span>
       </a>
     </nav>
   </section>
 
-  <section class="bloco">
-    <h2 class="rotulo">FUNDADOR</h2>
-    <div class="fundador">
-      <img src="/foto-atos.jpg" alt="Retrato de Matheus Uener" width="72" height="72" decoding="async">
-      <div>
-        <p>Desenvolver, construir e entregar soluções não é só um hobby para mim: é um trabalho que eu levo a sério e faço com excelência.</p>
-        <div class="assinatura rotulo">
-          <span>MATHEUS UENER</span>
-          <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">GITHUB · MATHEUSUENER-ATOS</a>
-        </div>
-      </div>
-    </div>
+  <section class="fundador">
+    <img src="/foto-atos.jpg" alt="Retrato de Matheus Uener" width="96" height="96" decoding="async">
+    <p>Desenvolver, construir e entregar soluções não é só um hobby para mim: é um trabalho que eu levo a sério e faço com excelência.</p>
   </section>
 </main>
 
 <footer class="rodape" id="rodape">
+  <span>Atos</span>
   <div>
-    <a href="mailto:contato@atos.dev.br">CONTATO@ATOS.DEV.BR</a>
-    <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
-  </div>
-  <span class="lema">ACTS OF THE APOSTLES · PRODUCT ENGINEERING · SYSTEMS DEVELOPMENT</span>
-  <div>
-    <a href="/privacidade/">PRIVACIDADE</a>
-    <a href="/termos/">TERMOS</a>
-    <a href="https://paulus.ia.br" target="_blank" rel="noopener">PAVLVS</a>
+    <details>
+      <summary>Contato</summary>
+      <div>
+        <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>
+        <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
+      </div>
+    </details>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/termos/">Termos</a>
   </div>
 </footer>
 </body>

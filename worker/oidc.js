@@ -180,7 +180,7 @@ export async function jwks(env) {
   return { keys: chaves };
 }
 
-async function assinarJWT(env, corpo) {
+export async function assinarJWT(env, corpo) {
   const k = await chaveDeAssinar(env);
   const cab = b64urlTexto(JSON.stringify({ alg: "ES256", typ: "JWT", kid: k.publica.kid }));
   const c = b64urlTexto(JSON.stringify(corpo));

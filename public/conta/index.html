@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Sua conta · Atos</title>
+<title>Minha conta · Atos</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/conta.css">
 <script src="/assets/tema.js"></script>
@@ -12,52 +12,58 @@
 </head>
 <body>
 <header class="topo">
-  <a class="marca" href="/">Atos</a>
+  <a class="marca" href="/" aria-label="Atos, página inicial">Atos</a>
   <nav aria-label="Principal">
-    <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">PROJETOS</a>
-    <a href="/#escritos">ESCRITOS</a>
-    <a href="/#carta">CARTA</a>
-    <a href="/#rodape">CONTATO</a>
-    <a href="/entrar/" aria-current="page">ENTRAR</a>
+    <a href="/#projetos">Projetos</a>
+    <a href="/#indice">Escritos</a>
+    <a href="/#indice">Carta</a>
+    <a href="/conta/" aria-current="page">Minha conta</a>
   </nav>
 </header>
-<main id="conta" hidden>
-  <div class="coluna">
-    <span class="coroa" aria-hidden="true"></span>
-    <div class="cabeca">
-      <h1 id="c-nome">Sua conta</h1>
-      <span class="rotulo" id="c-email"></span>
-    </div>
-    <section class="cartao">
-      <div class="acoes">
-        <a class="link forte" href="/entrar/?modo=esqueci">Trocar a senha</a>
-        <button type="button" class="link" id="c-sair">Sair</button>
-      </div>
-    </section>
 
-    <div class="rotulo secao">APLICATIVOS COM ACESSO</div>
-    <section class="cartao">
-      <p class="pequeno">Os aplicativos em que você entrou com a conta Atos. Tirar o acesso faz o aplicativo pedir a sua permissão de novo na próxima vez; para sair dele agora, saia também dentro do aplicativo.</p>
-      <p class="erro" id="c-erro" role="alert"></p>
-      <ul class="lista" id="c-apps"></ul>
-    </section>
-
-    <div class="rotulo secao">EXCLUIR A CONTA</div>
-    <section class="cartao">
-      <p class="pequeno">Escreva, deste e-mail, para contato@atos.dev.br pedindo a exclusão. Se você assina o PAVLVS, cancele a assinatura antes, em paulus.ia.br/minha-conta.</p>
-    </section>
-  </div>
+<main class="conta" id="conta" hidden>
+  <aside class="menu">
+    <div class="quem"><strong id="m-nome"></strong><span id="m-email"></span></div>
+    <nav aria-label="Conta">
+      <span>Conta</span>
+      <a href="/conta/" data-secao="resumo">Resumo</a>
+      <a href="/conta/dados" data-secao="dados">Dados</a>
+    </nav>
+    <nav aria-label="Cobrança">
+      <span>Cobrança</span>
+      <a href="/conta/assinaturas" data-secao="assinaturas">Assinaturas</a>
+      <a href="/conta/faturamento" data-secao="faturamento">Faturamento</a>
+      <a href="/conta/carteira" data-secao="carteira">Carteira</a>
+    </nav>
+    <button type="button" class="link sair" id="m-sair">Sair</button>
+  </aside>
+  <section class="secao" id="secao" aria-live="polite"></section>
 </main>
-<footer class="rodape">
-  <div>
-    <a href="mailto:contato@atos.dev.br">CONTATO@ATOS.DEV.BR</a>
-    <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
+
+<div class="fundo-modal" id="modal-excluir" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="excluir-titulo">
+    <h2 id="excluir-titulo">Antes, cancele a assinatura do PAVLVS</h2>
+    <p>Se você assina o PAVLVS, cancele a assinatura antes, em <a href="https://paulus.ia.br/minha-conta">paulus.ia.br/minha-conta</a>. Depois, escreva deste e-mail para <a href="mailto:contato@atos.dev.br?subject=Excluir%20a%20conta">contato@atos.dev.br</a> pedindo a exclusão.</p>
+    <div class="botoes">
+      <button type="button" class="btn p" data-fechar>Voltar</button>
+      <a class="btn p" href="mailto:contato@atos.dev.br?subject=Excluir%20a%20conta">Pedir por e-mail</a>
+      <a class="btn p primario" href="https://paulus.ia.br/minha-conta">Cancelar a assinatura</a>
+    </div>
   </div>
-  <span class="lema">ACTS OF THE APOSTLES · PRODUCT ENGINEERING · SYSTEMS DEVELOPMENT</span>
+</div>
+
+<footer class="rodape" id="rodape">
+  <span>Atos</span>
   <div>
-    <a href="/privacidade/">PRIVACIDADE</a>
-    <a href="/termos/">TERMOS</a>
-    <a href="https://paulus.ia.br" target="_blank" rel="noopener">PAVLVS</a>
+    <details>
+      <summary>Contato</summary>
+      <div>
+        <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>
+        <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
+      </div>
+    </details>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/termos/">Termos</a>
   </div>
 </footer>
 </body>

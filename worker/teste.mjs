@@ -244,5 +244,76 @@ const nonceDe = () => {
   checar(v.local.startsWith(A + "/entrar/?") && !v.local.includes("erro_google") && !v.cookie, "cancelar no Google volta ao pedido, sem erro");
 }
 
+console.log("Minha conta: o nome e a cobranca do PAVLVS");
+{
+  cookie = "";
+  r = await chamar("/api/nome", { corpo: { nome: "Maria" } });
+  checar(r.status === 401, "trocar o nome sem sessao: 401");
+  r = await chamar("/api/entrar", { corpo: { email: "maria@gmail.com", senha: "outrasenha99" } });
+  checar(r.status === 200 && cookie, "Maria entra", r.d);
+  r = await chamar("/api/nome", { corpo: { nome: " Maria <b>Souza</b> " } });
+  checar(r.status === 200 && JSON.parse(guardados.get("id:conta:maria@gmail.com")).nome === "Maria bSouza/b", "troca o nome (sem < >)", r.d);
+  r = await chamar("/api/nome", { corpo: { nome: "M" } });
+  checar(r.status === 400, "nome curto demais: recusado");
+
+  // O PAVLVS de mentira: confere o token da Atos e responde como /api/conta/* responde.
+  const pedidos = [];
+  let temConta = true;
+  let sessaoViva = true;
+  const fetchAntes = globalThis.fetch;
+  globalThis.fetch = async (u, op = {}) => {
+    const url = String(u);
+    if (!url.startsWith("https://paulus.ia.br/")) return fetchAntes(u, op);
+    const h = new Headers(op.headers);
+    pedidos.push({ url, metodo: op.method || "GET", cookie: h.get("cookie") || "", origin: h.get("origin") || "" });
+    if (url.endsWith("/api/conta/entrar")) {
+      const info = await conferirIdToken(env, JSON.parse(op.body).id_token);
+      if (!info || info.aud !== "pavlvs-site" || info.email !== "maria@gmail.com") return new Response(JSON.stringify({ erro: "token" }), { status: 401 });
+      if (!temConta) return new Response(JSON.stringify({ erro: "sem assinatura", sem_conta: true }), { status: 404 });
+      sessaoViva = true;
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "set-cookie": "pv_conta=" + "a".repeat(64) + "; Path=/; HttpOnly" } });
+    }
+    if (!sessaoViva) return new Response(JSON.stringify({ erro: "entre", entrar: true }), { status: 401 });
+    if (url.endsWith("/api/conta")) {
+      return new Response(JSON.stringify({
+        perfil: { papel: "titular" }, assinatura: { plano: "p1", nome: "Essencial", periodo: "mensal", situacao: "ativa", forma: "cartao", valor: 197, proxima: "2026-11-09", desde: "2026-08-09" },
+        pagamento: { tipo: "cartao", cartao: { bandeira: "visa", final: "4242", validade: "08/29", titular: "MARIA" } },
+        faturas: [{ data: "2026-10-09", descricao: "Mensalidade do plano", valor: 197, situacao: "paga", nfse: "128", pdf: "/api/conta/nfse/n128/pdf", xml: "/api/conta/nfse/n128/xml" }],
+        cadastro: { nome: "Maria", documento: "529.982.247-25" }, mp_public_key: "segredo-nao",
+      }), { status: 200 });
+    }
+    if (url.endsWith("/api/conta/nfse/n128/pdf")) return new Response("%PDF-1.4", { status: 200, headers: { "content-type": "application/pdf" } });
+    if (url.endsWith("/api/conta/cadastro")) return new Response(JSON.stringify({ ok: true, cadastro: { nome: "Maria S" } }), { status: 200 });
+    return new Response("{}", { status: 404 });
+  };
+
+  r = await chamar("/api/cobranca", { metodo: "GET", semCookie: true });
+  checar(r.status === 401, "cobranca sem sessao: 401");
+  r = await chamar("/api/cobranca", { metodo: "GET" });
+  checar(r.status === 200 && r.d.assinatura.situacao === "ativa" && r.d.cartao.final === "4242" && r.d.faturas[0].pdf === "/api/cobranca/nfse/n128/pdf" && r.d.papel === "titular",
+    "le a cobranca no PAVLVS e troca o endereco da NFS-e", r.d);
+  checar(!("mp_public_key" in r.d) && !JSON.stringify(r.d).includes("aaaa"), "so o que a tela mostra: nada do PAVLVS a mais, e o cookie de la nao vem");
+  checar(pedidos[0].origin === "https://paulus.ia.br" && pedidos[1].cookie === "pv_conta=" + "a".repeat(64), "entra no PAVLVS pelo servidor e usa o cookie de la", pedidos);
+  const n = pedidos.length;
+  r = await chamar("/api/cobranca", { metodo: "GET" });
+  checar(pedidos.length === n + 1, "a segunda vez usa o cookie guardado, sem entrar de novo");
+  sessaoViva = false;
+  r = await chamar("/api/cobranca", { metodo: "GET" });
+  checar(r.status === 200 && r.d.assinatura && pedidos.slice(n + 1).some((p) => p.url.endsWith("/entrar")), "a sessao do PAVLVS caiu: entra de novo uma vez");
+  r = await chamar("/api/cobranca/nfse/n128/pdf", { metodo: "GET" });
+  checar(r.status === 200 && r.r.headers.get("content-type") === "application/pdf" && (await r.r.text()).startsWith("%PDF"), "o PDF da NFS-e vem pela Atos");
+  r = await chamar("/api/cobranca/cadastro", { corpo: { nome: "Maria S", documento: "52998224725" } });
+  checar(r.status === 200 && r.d.cadastro.nome === "Maria S", "salva os dados da nota no PAVLVS", r.d);
+  r = await chamar("/api/cobranca/cadastro", { corpo: { nome: "x" }, origem: "https://mal.example" });
+  checar(r.status === 403, "salvar de outro site: 403");
+  temConta = false;
+  guardados.delete("atos:pv:" + JSON.parse(guardados.get("id:conta:maria@gmail.com")).sub);
+  r = await chamar("/api/cobranca", { metodo: "GET" });
+  checar(r.status === 200 && r.d.sem_conta === true, "sem assinatura no PAVLVS: sem_conta (a tela mostra os vazios)", r.d);
+  r = await worker.fetch(new Request(A + "/conta/faturamento"), env);
+  checar(r.status === 200 && /frame-ancestors 'none'/.test(r.headers.get("content-security-policy")), "/conta/faturamento abre a pagina da conta, com a CSP dela");
+  globalThis.fetch = fetchAntes;
+}
+
 console.log(falhas ? "\n" + falhas + " falha(s)" : "\ntudo certo");
 process.exit(falhas ? 1 : 0);
