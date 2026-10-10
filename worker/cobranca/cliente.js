@@ -8,7 +8,7 @@
 //   perfil              {tipo: "pf"|"pj", documento, nome, email, endereco{...}, atualizado}
 //   assinatura:<ref>    uma assinatura (a mensalidade no cartao) - ref e o external_reference
 //   compra:<ref>        uma compra (o ano, o mes no Pix, a recarga)
-//   direito:<produto>   ate quando o produto esta pago, o plano, os creditos e a `versao` do retrato
+//   direito:<produto>   ate quando o produto esta pago, o plano, o periodo que pagou, os creditos e a `versao`
 //   evento:<seq>        a fila de saida para o produto (eventos.js), entregue pelo alarme deste objeto
 //
 // Pedidos: POST com {op, ...}; a resposta e JSON. Quem chama e so o Worker (api.js e o aviso).
@@ -17,6 +17,17 @@ import { entregar, REENTREGAS_S } from "./eventos.js";
 
 const PREFIXOS = { assinatura: "assinatura:", compra: "compra:" };
 const VIVAS = ["authorized", "pending", "paused"];
+
+/* Um mes depois, no mesmo dia, ou no ultimo do mes se ele nao tiver o dia (31/01 -> 28/02), e um mes de
+   cada vez (o ano sao doze): a mesma conta do produto (o PAVLVS abre os ciclos assim), para o "pago ate"
+   da Atos e o fim do ciclo do produto cairem no mesmo dia. */
+export function maisUmMes(ms) {
+  const d = new Date(ms);
+  const dia = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  if (d.getUTCDate() < dia) d.setUTCDate(0);
+  return d.getTime();
+}
 
 export async function idDoCliente(sub) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("cliente:" + sub));
@@ -119,9 +130,11 @@ export class ClienteCobranca {
         const r = { ...antes, aplicados: [...(antes.aplicados || []), d.origem].slice(-200), plano: d.plano || antes.plano,
           metadados: d.metadados || antes.metadados || null, atualizado: agora };
         if (d.meses) {
-          const base = antes.ate && Date.parse(antes.ate) > Date.now() ? new Date(antes.ate) : new Date();
-          base.setUTCMonth(base.getUTCMonth() + d.meses);
-          r.ate = base.toISOString();
+          let ate = antes.ate && Date.parse(antes.ate) > Date.now() ? Date.parse(antes.ate) : Date.now();
+          for (let i = 0; i < d.meses; i++) ate = maisUmMes(ate);
+          r.ate = new Date(ate).toISOString();
+          // O que pagou o direito de agora: o ano, ou um mes (a assinatura no cartao ou o mes no Pix).
+          r.periodo = d.meses === 12 ? "ano" : "mes";
         }
         if (d.credito) r.creditos = [...(antes.creditos || []), { ...d.credito, origem: d.origem, quando: agora }].slice(-50);
         await s.put(chave, r);
@@ -150,6 +163,7 @@ export class ClienteCobranca {
     const a = vivas.find((x) => VIVAS.includes(x.status)) || vivas[0] || null;
     return {
       versao: dir.versao || 0, plano: dir.plano || (a && a.plano) || null, metadados: dir.metadados || null, ate: dir.ate || null,
+      periodo: dir.periodo || null,
       assinatura: a ? { id: a.ref, status: a.status, proxima: a.proxima || null, preco: a.preco } : null,
     };
   }

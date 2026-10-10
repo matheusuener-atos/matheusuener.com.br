@@ -85,21 +85,37 @@ Decisão do dono, 09/10/2026: "criar tudo no Mercado Pago exclusivo Atos, e os s
 
 ### Onde está (09/10/2026)
 
-- **Etapa 1 feita**: app "Atos Cobranca" criado no Mercado Pago (ID 6924335552095997, Checkout Transparente pela Orders API, MLB). Faltam, do dono: `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` (segredos), `MP_PUBLIC_KEY` (var) e o webhook cadastrado no app.
-- **Etapas 2 e 3 em parte, no ar e fechadas** (`PRODUTOS_ABERTOS` vazio: nada cobra). Já existem:
-  - **o núcleo** (`worker/cobranca/`): `catalogo.js` (preços do PAVLVS em centavos, `resolveOffer`), `cliente.js` (Durable Object `ClienteCobranca`: dados fiscais, assinaturas, compras, direitos, avisos vistos), `mp.js` (a API REST, `X-Idempotency-Key` na Orders API) e `api.js`;
-  - **o checkout** `/pavlvs/assinar/`: mensal no cartão como assinatura (`/preapproval`, sem plano, `authorized`); o ano no cartão ou no Pix, o mês no Pix e a recarga no Pix pela Orders API;
-  - **o aviso** `/api/mp/aviso`, com HMAC, que busca no Mercado Pago e aplica uma vez só;
-  - **a assinatura**: `GET /api/subscriptions/:id` e pausar, reativar e cancelar;
-  - **o direito** por produto (até quando está pago, e os créditos da recarga);
-  - **os testes**: 37, em `worker/cobranca/teste.mjs`;
-  - **os validadores do Mercado Pago**: passam o da tela e o das assinaturas.
+- **Etapa 1 feita**: o app "Atos Cobranca" no Mercado Pago (ID 6924335552095997, Checkout Transparente pela Orders API, MLB), com as credenciais de produção no Worker (`MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` como segredos, `MP_PUBLIC_KEY` como var). Falta, do dono, cadastrar o webhook `https://atos.dev.br/api/mp/aviso` no app (tópicos Order, Planos e assinaturas, Pagamentos).
+- **Etapas 2 e 3 feitas, fechadas** (`PRODUTOS_ABERTOS` vazio: nada cobra):
+  - **o núcleo** (`worker/cobranca/`): `catalogo.js` (os preços do PAVLVS em centavos, `resolveOffer`), `cliente.js` (o Durable Object `ClienteCobranca`), `mp.js` (a API REST, `X-Idempotency-Key` na Orders API) e `api.js`;
+  - **o checkout** `/pavlvs/assinar/`: o mês no cartão é assinatura (`/preapproval`, sem plano, `authorized`); o ano vai no cartão ou no Pix, e o mês e a recarga no Pix, pela Orders API;
+  - **o aviso** `/api/mp/aviso`: confere o HMAC, busca no Mercado Pago e aplica uma vez só;
+  - **a assinatura**: `GET /api/subscriptions/:id`, com pausar, reativar e cancelar;
+  - **nunca cobrar em dobro**:
+    - com assinatura viva, só a recarga (`ja_assina`);
+    - com o período pago, a assinatura só começa depois do vencimento (`pago_ate`);
+    - mais tempo só no mesmo plano (`troca_de_plano`);
+  - **os eventos** (`eventos.js`), em fila por cliente, entregues pelo alarme do objeto, em ordem:
+    - `direito.atualizado` leva o retrato versionado, com plano, metadados, até quando, o período que pagou e a assinatura;
+    - `credito.adicionado` leva a recarga;
+    - assinatura `Atos-Assinatura: t=,v1=` (HMAC com `EVENTOS_SEGREDO_<PRODUTO>`);
+    - reentrega em 1 min, 5 min, 30 min, 2 h e 12 h; esgotadas, "falhou";
+  - **a reserva** `GET /api/cobranca/v1/direitos`, com Bearer do mesmo segredo;
+  - **o mês**: a mesma conta do PAVLVS (`maisUmMes`, 31/01 → 28/02, um mês de cada vez), para o "pago até" e o fim do ciclo do produto caírem no mesmo dia;
+  - **os testes**: 54, em `worker/cobranca/teste.mjs`.
+- **Etapa 4 feita no coryphaeus** (`worker/atos.js`, `node worker/teste-atos.mjs`, 45 ok):
+  - **`POST /api/atos/eventos`**: confere a assinatura e aplica no ContaIA:
+    - `atos_direito`, só versão maior;
+    - `atos_credito`, uma vez por pagamento;
+  - **a conta passa a ser cobrada pela Atos** (`cobrador: "atos"`): os ciclos rolam até o "pago até"; o tempo que o PAVLVS já tinha cobrado fica; a assinatura antiga do Mercado Pago do PAVLVS é cancelada;
+  - **as rotas de dinheiro do PAVLVS** (site, PAULUS instalado, Minha conta, painel) recusam a conta da Atos com 409 `cobranca_na_atos`, que manda a `atos.dev.br/conta`;
+  - **a conta fora de dia pergunta à Atos** (a reserva), no máximo a cada 10 minutos.
 - **Falta, nesta ordem:**
-  1. eventos assinados para o produto, com reentrega, e `GET /api/cobranca/v1/direitos` para o produto;
-  2. o PAVLVS consumir os eventos (`/api/atos/eventos` → ContaIA);
-  3. abrir o PAVLVS (`PRODUTOS_ABERTOS=pavlvs`) e juntar o branch `pavlvs-checkout-atos` do coryphaeus (o "Assinar" dos planos levando a esta tela);
-  4. as seções da `/conta` lendo daqui;
-  5. a devolução no painel;
-  6. a NFS-e.
+  1. **do dono:** o mesmo segredo `EVENTOS_SEGREDO_PAVLVS` nos dois Workers (`npx wrangler secret put EVENTOS_SEGREDO_PAVLVS` em C:\atos e em C:\coryphaeus), o deploy dos dois e o webhook no app;
+  2. **o teste de ponta a ponta** com as credenciais de teste do app (aba Teste) e um comprador de teste;
+  3. **abrir o PAVLVS** (`PRODUTOS_ABERTOS=pavlvs`) e juntar o branch `pavlvs-checkout-atos` do coryphaeus (o "Assinar" dos planos levando a esta tela);
+  4. **as seções da `/conta`** lendo daqui (o plano, as faturas, pausar e cancelar; hoje a Minha conta do PAVLVS só diz que é na Atos);
+  5. **a devolução no painel**;
+  6. **a NFS-e.**
 
 Cada etapa vai ao ar com os testes passando e sem quebrar a anterior. Não há assinante real hoje (uma conta só, a do dono), então não há assinatura antiga do Mercado Pago para carregar.

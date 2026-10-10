@@ -3,7 +3,7 @@
 //   node worker/cobranca/teste.mjs
 import { createHmac } from "node:crypto";
 import worker from "../index.js";
-import { ClienteCobranca, idDoCliente } from "./cliente.js";
+import { ClienteCobranca, idDoCliente, maisUmMes } from "./cliente.js";
 import { conferirPerfil, cnpjValido, cpfValido } from "./api.js";
 import { resolveOffer } from "./catalogo.js";
 import { sha256 } from "../comum.js";
@@ -263,8 +263,8 @@ const versoes = direitosEv.map((e) => e.dados.versao);
 checar(direitosEv.length >= 3 && versoes.every((v, i) => i === 0 || v > versoes[i - 1]), "direito.atualizado com a versao sempre crescendo", versoes);
 const ultimo = direitosEv[direitosEv.length - 1];
 checar(ultimo.conta.sub === "pv-dona" && ultimo.conta.email === "dona@escritorio.adv.br" && ultimo.produto === "pavlvs" && ultimo.dados.assinatura.status === "canceled"
-  && ultimo.dados.plano === "escritorio" && ultimo.dados.metadados.tokens_por_ciclo === 60000000 && ultimo.dados.ate,
-  "o ultimo retrato: de quem e, o plano com os metadados, ate quando, a assinatura cancelada", ultimo);
+  && ultimo.dados.plano === "escritorio" && ultimo.dados.metadados.tokens_por_ciclo === 60000000 && ultimo.dados.ate && ["mes", "ano"].includes(ultimo.dados.periodo),
+  "o ultimo retrato: de quem e, o plano com os metadados, ate quando, o periodo que pagou, a assinatura cancelada", ultimo);
 const credito = recebidos.find((x) => x.ev.tipo === "credito.adicionado");
 checar(credito && credito.ev.dados.origem === "order:ORD0" && credito.ev.dados.metadados.tokens === 10000000, "credito.adicionado: a recarga com a origem e os tokens", credito && credito.ev.dados);
 checar(!(await verificarEvento("segredo-dos-eventos", produto.recebidos[0].corpo.replace("pavlvs", "outro"), produto.recebidos[0].assinatura))
@@ -302,6 +302,13 @@ r = await chamar("/api/cobranca/v1/direitos?produto=pavlvs&sub=pv-dona", { semCo
 checar(r.status === 401, "sem o segredo certo: 401");
 r = await chamar("/api/cobranca/v1/direitos?produto=pavlvs&sub=pv-dona", { headers: { authorization: "" } });
 checar(r.status === 401, "a sessao da pessoa nao abre os direitos de produto: 401");
+
+console.log("o mes da Atos e o do produto");
+{
+  const em = (iso) => new Date(maisUmMes(Date.parse(iso))).toISOString().slice(0, 10);
+  checar(em("2027-01-31T12:00:00Z") === "2027-02-28" && em("2028-01-31T12:00:00Z") === "2028-02-29" && em("2027-03-15T12:00:00Z") === "2027-04-15",
+    "31/01 mais um mes e 28/02 (29 no bissexto); o dia que existe fica");
+}
 
 console.log(falhas ? "\n" + falhas + " falha(s)" : "\ntudo certo");
 process.exit(falhas ? 1 : 0);
