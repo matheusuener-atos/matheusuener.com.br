@@ -11,6 +11,10 @@ import { atenderConta, ehRotaDaConta } from "./contas.js";
 import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
 import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
 import { atenderCobranca, ehRotaDaCobranca } from "./cobranca.js";
+import { atenderCobrancaV1, ehRotaDaCobrancaV1 } from "./cobranca/api.js";
+
+// O registro de cada cliente da Atos Cobranca (docs/COBRANCA.md): o Durable Object precisa sair do modulo principal.
+export { ClienteCobranca } from "./cobranca/cliente.js";
 
 const CSP_CONTA = [
   "default-src 'self'",
@@ -36,6 +40,41 @@ const CSP_SITE = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// O checkout (/pavlvs/assinar e os de outros produtos): os campos seguros do Mercado Pago (o SDK, os
+// iframes do cartao e a telemetria dele) e o CEP pela ViaCEP. O script da propria pagina roda pelo
+// hash dele (CSP_CHECKOUT recebe os 'sha256-...'), nunca por 'unsafe-inline'. O MercadoPago.js poe
+// estilos inline nos campos: so o estilo tem 'unsafe-inline'.
+const MP_ORIGENS = "https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadolivre.com https://*.mlstatic.com";
+const CSP_CHECKOUT = (hashes) => [
+  "default-src 'self'",
+  `script-src 'self' https://sdk.mercadopago.com ${MP_ORIGENS} ${hashes.join(" ")}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  `connect-src 'self' ${MP_ORIGENS} https://viacep.com.br`,
+  `frame-src ${MP_ORIGENS}`,
+  "form-action 'self'",
+  "base-uri 'none'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+async function comCspDoCheckout(resposta) {
+  const html = await resposta.text();
+  const hashes = [];
+  for (const m of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(m[1]));
+    hashes.push("'sha256-" + btoa(String.fromCharCode(...new Uint8Array(h))) + "'");
+  }
+  const r = new Response(html, resposta);
+  r.headers.set("content-security-policy", CSP_CHECKOUT(hashes));
+  r.headers.set("x-frame-options", "DENY");
+  r.headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  r.headers.set("cache-control", "no-store");
+  r.headers.set("x-content-type-options", "nosniff");
+  r.headers.set("strict-transport-security", "max-age=31536000");
+  return r;
+}
+
 function comCabecalhos(resposta, conta) {
   const r = new Response(resposta.body, resposta);
   if ((r.headers.get("content-type") || "").includes("text/html")) {
@@ -56,6 +95,12 @@ export default {
       return Response.redirect(EMISSOR + url.pathname + url.search, 301);
     }
     try {
+      // A Atos Cobranca: o aviso do Mercado Pago chega de fora (sem Origin; quem garante e a assinatura
+      // HMAC); o resto e da propria pagina.
+      if (ehRotaDaCobrancaV1(url)) {
+        if (url.pathname !== "/api/mp/aviso" && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
+        return comCabecalhos(await atenderCobrancaV1(request, env, url, { ctx }));
+      }
       if (ehRotaDoGoogle(url)) return comCabecalhos(await atenderGoogle(request, env, url));
       if (ehRotaDoOIDC(url)) {
         if (url.pathname.startsWith("/api/") && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
@@ -73,6 +118,11 @@ export default {
       return json({ erro: "falha no servidor da conta" }, 500);
     }
     if (url.pathname.startsWith("/api/")) return json({ erro: "rota não existe" }, 404);
+    // O checkout de cada produto (public/<produto>/assinar/).
+    if (/^\/[a-z0-9-]+\/assinar\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(request);
+      return (r.headers.get("content-type") || "").includes("text/html") ? comCspDoCheckout(r) : comCabecalhos(r);
+    }
     const conta = /^\/(entrar|conta)(\/|$)/.test(url.pathname);
     // Cada secao da Minha conta tem o proprio endereco; a pagina e uma so.
     if (/^\/conta\/(dados|assinaturas|faturamento|carteira)\/?$/.test(url.pathname)) {

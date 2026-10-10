@@ -31,5 +31,19 @@
   // "atos:*" (sessoes, permissoes, codigos e tokens) so deste Worker.
   "kv_namespaces": [{ "binding": "CONTAS", "id": "c8011a70799b40b0b3215f4a01b2d28c" }],
   "ratelimits": [{ "name": "LIMITE", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // A Atos Cobranca (docs/COBRANCA.md, worker/cobranca/): um objeto por cliente (a Conta Atos), com os dados
+  // fiscais, as assinaturas, as compras e os direitos - o registro do dinheiro, com consistencia forte.
+  "durable_objects": { "bindings": [{ "name": "CLIENTES", "class_name": "ClienteCobranca" }] },
+  "migrations": [{ "tag": "v1-clientes-cobranca", "new_sqlite_classes": ["ClienteCobranca"] }],
+  // O app "Atos Cobranca" no Mercado Pago (6924335552095997). Segredos (npx wrangler secret put):
+  //   MP_ACCESS_TOKEN    o Access Token de producao do app (cobrar, assinar, devolver)
+  //   MP_WEBHOOK_SECRET  a assinatura secreta do webhook (o aviso em https://atos.dev.br/api/mp/aviso)
+  // MP_PUBLIC_KEY e a Public Key do mesmo app (nao e segredo; vai ao navegador por /api/mp-config).
+  // PRODUTOS_ABERTOS: os produtos que ja vendem pela Atos ("pavlvs,..."); vazio = nenhum cobra ainda.
+  "vars": {
+    "APP_URL": "https://atos.dev.br",
+    "MP_PUBLIC_KEY": "",
+    "PRODUTOS_ABERTOS": ""
+  }
 }

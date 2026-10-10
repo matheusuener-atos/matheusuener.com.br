@@ -1,0 +1,24 @@
+/* O checkout da Atos Cobranca (public/<produto>/assinar/), por cima de conta.css: a mesma linguagem
+   (cantos retos, superficies solidas, 36px). Os tres campos seguros sao iframes do Mercado Pago: o
+   contorno fica no host, que tem altura e e interativo (nada por cima). */
+.checkout { flex: 1; display: flex; justify-content: center; padding: 40px 16px 64px; }
+.checkout-coluna { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 20px; }
+.checkout h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1.15; }
+.checkout .descricao { margin: -12px 0 0; font-size: 13px; color: var(--muted); }
+.checkout-bloco { display: flex; flex-direction: column; gap: 12px; }
+.checkout-escolhas { display: flex; flex-wrap: wrap; gap: 8px; }
+.checkout-total { margin: 4px 0 0; font-size: 15px; color: var(--text-2); }
+.checkout-total strong { font-family: var(--serif); font-weight: 400; font-size: 26px; color: var(--text); }
+.checkout-aviso { margin: 0; padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--text-2); }
+.checkout-aviso.erro { border-color: var(--danger-line); color: var(--danger); }
+.checkout .form h2 { margin: 0; }
+.checkout-cidade { display: grid; grid-template-columns: 1fr 56px; gap: 8px; }
+.checkout-cidade input { height: 36px; padding: 0 10px; background: var(--bg); border: 1px solid var(--line); color: var(--text); font: inherit; outline: none; }
+.secure-input { position: relative; height: 36px; background: var(--bg); border: 1px solid var(--line); }
+.secure-input:focus-within { border-color: var(--faint); }
+.secure-input iframe { display: block; width: 100%; height: 100%; border: 0; }
+#ck-pix-codigo { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+#ck-pix-qr { background: #fff; padding: 8px; width: 220px; height: 220px; }
+#ck-pix-copia { width: 100%; }
+.checkout-fim h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 24px; }
+@media (max-width: 560px) { .checkout { padding-top: 24px; } .checkout-escolhas .alternar { width: 100%; } }

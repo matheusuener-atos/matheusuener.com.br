@@ -2,3 +2,6 @@ node_modules/
 .wrangler/
 chave.json
 .dev.vars
+.mp-integrate-progress.md
+.env
+.env.*.local

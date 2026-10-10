@@ -83,4 +83,23 @@ Decisão do dono, 09/10/2026: "criar tudo no Mercado Pago exclusivo Atos, e os s
 5. **PAVLVS cliente**: `/api/atos/eventos`, direitos e o site levando à Atos. Sai a cobrança do Worker do PAVLVS.
 6. **Painel da Atos**, e a versão do programa que fala direto.
 
+### Onde está (09/10/2026)
+
+- **Etapa 1 feita**: app "Atos Cobranca" criado no Mercado Pago (ID 6924335552095997, Checkout Transparente pela Orders API, MLB). Faltam, do dono: `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` (segredos), `MP_PUBLIC_KEY` (var) e o webhook cadastrado no app.
+- **Etapas 2 e 3 em parte, no ar e fechadas** (`PRODUTOS_ABERTOS` vazio: nada cobra). Já existem:
+  - **o núcleo** (`worker/cobranca/`): `catalogo.js` (preços do PAVLVS em centavos, `resolveOffer`), `cliente.js` (Durable Object `ClienteCobranca`: dados fiscais, assinaturas, compras, direitos, avisos vistos), `mp.js` (a API REST, `X-Idempotency-Key` na Orders API) e `api.js`;
+  - **o checkout** `/pavlvs/assinar/`: mensal no cartão como assinatura (`/preapproval`, sem plano, `authorized`); o ano no cartão ou no Pix, o mês no Pix e a recarga no Pix pela Orders API;
+  - **o aviso** `/api/mp/aviso`, com HMAC, que busca no Mercado Pago e aplica uma vez só;
+  - **a assinatura**: `GET /api/subscriptions/:id` e pausar, reativar e cancelar;
+  - **o direito** por produto (até quando está pago, e os créditos da recarga);
+  - **os testes**: 37, em `worker/cobranca/teste.mjs`;
+  - **os validadores do Mercado Pago**: passam o da tela e o das assinaturas.
+- **Falta, nesta ordem:**
+  1. eventos assinados para o produto, com reentrega, e `GET /api/cobranca/v1/direitos` para o produto;
+  2. o PAVLVS consumir os eventos (`/api/atos/eventos` → ContaIA);
+  3. abrir o PAVLVS (`PRODUTOS_ABERTOS=pavlvs`) e juntar o branch `pavlvs-checkout-atos` do coryphaeus (o "Assinar" dos planos levando a esta tela);
+  4. as seções da `/conta` lendo daqui;
+  5. a devolução no painel;
+  6. a NFS-e.
+
 Cada etapa vai ao ar com os testes passando e sem quebrar a anterior. Não há assinante real hoje (uma conta só, a do dono), então não há assinatura antiga do Mercado Pago para carregar.
