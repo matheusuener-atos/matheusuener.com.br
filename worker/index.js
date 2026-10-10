@@ -12,6 +12,7 @@ import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
 import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
 import { atenderCobranca, ehRotaDaCobranca } from "./cobranca.js";
 import { atenderCobrancaV1, ehRotaDaCobrancaV1 } from "./cobranca/api.js";
+import { ehAmbienteDeTeste } from "./cobranca/eventos.js";
 
 // O registro de cada cliente da Atos Cobranca (docs/COBRANCA.md): o Durable Object precisa sair do modulo principal.
 export { ClienteCobranca } from "./cobranca/cliente.js";
@@ -91,7 +92,9 @@ function comCabecalhos(resposta, conta) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.hostname !== "atos.dev.br" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+    // O Worker de teste (wrangler --env teste: atos-teste.<conta>.workers.dev) atende no proprio endereco.
+    const doTeste = ehAmbienteDeTeste(env) && /^atos-teste\.[a-z0-9-]+\.workers\.dev$/.test(url.hostname);
+    if (url.hostname !== "atos.dev.br" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1" && !doTeste) {
       return Response.redirect(EMISSOR + url.pathname + url.search, 301);
     }
     try {

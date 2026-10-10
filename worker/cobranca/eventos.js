@@ -50,11 +50,24 @@ export async function verificarEvento(segredo, corpo, cabecalho, agora = Date.no
   return iguais(await hmacHex(segredo, `${ts}.${corpo}`), String(p.v1).toLowerCase());
 }
 
+/* O Worker de teste (wrangler --env teste, AMBIENTE "teste", com as credenciais de teste do Mercado Pago): os
+   eventos nao vao ao produto de verdade - um pagamento de teste nao pode liberar plano no PAVLVS. Vao a um
+   receptor aqui dentro, que confere a assinatura como o produto confere; GET /api/teste/eventos mostra a fila. */
+export function ehAmbienteDeTeste(env) {
+  return env.AMBIENTE === "teste";
+}
+
+async function receptorDeTeste(segredo, url, init) {
+  const ok = await verificarEvento(segredo, init.body, init.headers["Atos-Assinatura"]);
+  return new Response(JSON.stringify(ok ? { ok: true, aplicado: true } : { erro: "assinatura da Atos não confere" }), { status: ok ? 200 : 401 });
+}
+
 /* Entrega um evento ao produto. {ok, status}. Sem endpoint ou sem segredo: nao entrega (e diz). */
 export async function entregar(env, evento, { buscar = fetch } = {}) {
   const produto = PRODUTOS[evento.produto];
   const segredo = segredoDo(env, evento.produto);
   if (!produto || !produto.eventos || !segredo) return { ok: false, status: 0, motivo: "produto sem endpoint ou sem segredo de eventos" };
+  if (ehAmbienteDeTeste(env)) buscar = (url, init) => receptorDeTeste(segredo, url, init);
   const corpo = JSON.stringify(evento);
   try {
     const r = await buscar(produto.eventos, {

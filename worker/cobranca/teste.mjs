@@ -310,5 +310,25 @@ console.log("o mes da Atos e o do produto");
     "31/01 mais um mes e 28/02 (29 no bissexto); o dia que existe fica");
 }
 
+console.log("o Worker de teste (wrangler --env teste)");
+{
+  const T = "https://atos-teste.conta1.workers.dev";
+  let w = await worker.fetch(new Request(T + "/pavlvs/assinar/"), env, { waitUntil: () => {} });
+  checar(w.status === 301 && w.headers.get("location") === "https://atos.dev.br/pavlvs/assinar/", "em producao, o endereco de teste volta a atos.dev.br", w.status);
+  const envTeste = { ...env, AMBIENTE: "teste" };
+  w = await worker.fetch(new Request(T + "/api/cobranca/v1/catalogo/pavlvs"), envTeste, { waitUntil: () => {} });
+  checar(w.status === 200, "no Worker de teste, o proprio endereco atende", w.status);
+  w = await worker.fetch(new Request("https://atos-teste.evil.example/"), envTeste, { waitUntil: () => {} });
+  checar(w.status === 301, "e so ele: outro endereco volta a atos.dev.br", w.status);
+  // Os eventos: no teste, o receptor interno confere a assinatura; nada sai para o produto de verdade.
+  const { entregar } = await import("./eventos.js");
+  let saiu = 0;
+  const ev = { id: "ev-t", tipo: "direito.atualizado", produto: "pavlvs", conta: { sub: "x", email: "x@y" }, dados: {} };
+  const rt = await entregar(envTeste, ev, { buscar: async () => { saiu++; return new Response("{}"); } });
+  checar(rt.ok && rt.status === 200 && saiu === 0, "no teste, o evento vai ao receptor interno, assinado e conferido, e nao ao paulus.ia.br", { rt, saiu });
+  r = await chamar("/api/teste/eventos");
+  checar(r.status === 404, "em producao, /api/teste/eventos nao existe", r.status);
+}
+
 console.log(falhas ? "\n" + falhas + " falha(s)" : "\ntudo certo");
 process.exit(falhas ? 1 : 0);

@@ -23,7 +23,7 @@ import { json, lerJson } from "../comum.js";
 import { sessaoDe } from "../contas.js";
 import { catalogoPublico, MOEDA, produtoAberto, resolveOffer, voltaPermitida } from "./catalogo.js";
 import { cliente, clienteDaRef, idDoCliente, novaRef } from "./cliente.js";
-import { segredoDo } from "./eventos.js";
+import { ehAmbienteDeTeste, segredoDo } from "./eventos.js";
 import { criarPreapproval, ErroMP, fraseDaRecusa, mpFetch } from "./mp.js";
 
 const ACOES = { pause: "paused", reactivate: "authorized", cancel: "cancelled" }; // cancel -> canceled (a API grafa "cancelled")
@@ -31,7 +31,7 @@ const PIX_VALIDADE = "P1D";
 
 export function ehRotaDaCobrancaV1(url) {
   const p = url.pathname;
-  return p === "/api/mp-config" || p === "/api/mp/aviso" || p.startsWith("/api/cobranca/v1/") || p.startsWith("/api/subscriptions/");
+  return p === "/api/mp-config" || p === "/api/mp/aviso" || p.startsWith("/api/cobranca/v1/") || p.startsWith("/api/subscriptions/") || p === "/api/teste/eventos";
 }
 
 const erro = (status, frase, codigo) => json({ erro: frase, codigo: codigo || undefined }, status);
@@ -86,6 +86,11 @@ export async function atenderCobrancaV1(request, env, url, deps = {}) {
   const meu = cliente(env, cid, { sub: s.sub, email: s.email });
 
   try {
+    // So no Worker de teste: a fila de eventos desta conta (entregue, pendente ou falhou), para conferir.
+    if (p === "/api/teste/eventos" && request.method === "GET") {
+      if (!ehAmbienteDeTeste(env)) return erro(404, "rota não existe");
+      return json({ eventos: (await meu.pedir("eventos")).eventos });
+    }
     if (p === "/api/cobranca/v1/cliente") {
       if (request.method === "GET") return json({ perfil: (await meu.pedir("perfil_ler")).perfil });
       const d = (await lerJson(request)) || {};

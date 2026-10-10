@@ -45,5 +45,27 @@
     "APP_URL": "https://atos.dev.br",
     "MP_PUBLIC_KEY": "APP_USR-0bb20e6b-f846-4b8e-a267-12bfc8c7fc1a",
     "PRODUTOS_ABERTOS": ""
+  },
+  // O Worker de teste: npx wrangler deploy --env teste -> atos-teste.<conta>.workers.dev. As credenciais da aba
+  // Teste do app Atos Cobranca (nenhum dinheiro de verdade), as vendas abertas so aqui, e os eventos num receptor
+  // interno (worker/cobranca/eventos.js, AMBIENTE "teste"): um pagamento de teste nunca libera plano no PAVLVS.
+  // As contas sao as mesmas (o mesmo KV): entra-se com a Conta Atos e a senha. Os objetos de cobranca sao
+  // outros (cada Worker tem os seus). Segredos proprios, com --env teste: MP_ACCESS_TOKEN (o de teste),
+  // MP_WEBHOOK_SECRET e EVENTOS_SEGREDO_PAVLVS (um qualquer, diferente do de producao).
+  "env": {
+    "teste": {
+      "name": "atos-teste",
+      "workers_dev": true,
+      "routes": [],
+      "kv_namespaces": [{ "binding": "CONTAS", "id": "c8011a70799b40b0b3215f4a01b2d28c" }],
+      "ratelimits": [{ "name": "LIMITE", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }],
+      "durable_objects": { "bindings": [{ "name": "CLIENTES", "class_name": "ClienteCobranca" }] },
+      "vars": {
+        "AMBIENTE": "teste",
+        "APP_URL": "https://atos.dev.br",
+        "MP_PUBLIC_KEY": "APP_USR-8eddac59-2852-455f-8b12-04f7761ff00b",
+        "PRODUTOS_ABERTOS": "pavlvs"
+      }
+    }
   }
 }
