@@ -151,8 +151,6 @@ h1, h2, h3, p { margin: 0; }
 main.entrar { flex: 1; display: flex; justify-content: center; align-items: center; gap: 80px; padding: 48px 28px; }
 main.entrar .quadro { flex: 0 0 auto; width: min(380px, calc((100vh - 230px) * .8)); min-width: 260px; }
 .coluna { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 14px; }
-.coroa { display: none; width: 40px; height: 40px; margin: 0 auto; background: url(/assets/coroa-branca.png) center / 40px no-repeat; }
-body.popup .coroa { display: block; }
 .pilha { display: flex; flex-direction: column; gap: 14px; }
 .cabeca { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; padding-bottom: 12px; }
 body.popup .cabeca { align-items: center; text-align: center; }

@@ -63,7 +63,9 @@
 .cartao-face.verso { transform: rotateY(180deg); display: flex; flex-direction: column; justify-content: center; gap: 12px; }
 .cartao-cab { display: flex; justify-content: space-between; align-items: center; }
 .cartao-marca { font-family: var(--serif); font-size: 18px; }
-.cartao-bandeira { font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--text-soft); }
+.cartao-bandeira { display: flex; align-items: center; height: 28px; font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--text-soft); }
+/* a imagem do Mercado Pago tem fundo transparente e cores escuras: vai numa plaquinha clara */
+.cartao-bandeira img { display: block; height: 28px; width: auto; max-width: 64px; padding: 2px 6px; background: var(--text); object-fit: contain; }
 .cartao-chip { width: 38px; height: 28px; background: var(--silver); opacity: .55; }
 .cartao-numero { font-size: clamp(16px, 2vw, 22px); font-weight: 500; letter-spacing: .1em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cartao-pe { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; font-size: 12px; font-weight: 500; }

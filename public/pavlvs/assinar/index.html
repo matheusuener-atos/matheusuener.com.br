@@ -396,6 +396,20 @@
     var t = (d + "••••••••••••••••").slice(0, 16);
     $("cd-numero").textContent = t.replace(/(.{4})/g, "$1 ").trim();
   }
+  /* A bandeira: a imagem oficial que o Mercado Pago devolve com o metodo (secure_thumbnail); sem ela, o nome. */
+  function desenharBandeira(m) {
+    var el = $("cd-bandeira");
+    el.innerHTML = "";
+    if (!m) return;
+    var nome = BANDEIRAS[m.id] || String(m.name || m.id).toUpperCase();
+    var src = String(m.secure_thumbnail || m.thumbnail || "").replace(/^http:/, "https:");
+    if (!src) { el.textContent = nome; return; }
+    var img = new Image();
+    img.alt = nome;
+    img.onerror = function () { el.textContent = nome; };
+    img.src = src;
+    el.appendChild(img);
+  }
   function virar(verso) { $("ck-desenho").classList.toggle("virado", verso); }
 
   async function montarCartao() {
@@ -430,7 +444,7 @@
         onBinChange: function (bin) { desenharBin(bin); },
         onPaymentMethodsReceived: function (erro, metodos) {
           var m = !erro && metodos && metodos[0];
-          $("cd-bandeira").textContent = m ? (BANDEIRAS[m.id] || String(m.name || m.id).toUpperCase()) : "";
+          desenharBandeira(m);
         },
       },
     });
