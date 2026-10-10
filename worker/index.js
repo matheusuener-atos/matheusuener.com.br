@@ -29,13 +29,16 @@ const CSP_CONTA = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// As paginas publicas (inicio, privacidade, termos): a contagem de visitas da Cloudflare (Web Analytics, sem
+// cookies; o beacon que ela poe sozinha) roda so aqui - a conta, o entrar (CSP_CONTA) e o checkout continuam sem
+// script de terceiros alem do Mercado Pago. Dito na politica de privacidade.
 const CSP_SITE = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' https://static.cloudflareinsights.com",
   "style-src 'self' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data:",
-  "connect-src 'self' https://viacep.com.br",
+  "connect-src 'self' https://viacep.com.br https://cloudflareinsights.com",
   "base-uri 'none'",
   "object-src 'none'",
   "frame-ancestors 'none'",

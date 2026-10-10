@@ -58,6 +58,15 @@ let r = await worker.fetch(new Request("https://matheusuener.com.br/x?y=1"), env
 checar(r.status === 301 && r.headers.get("location") === A + "/x?y=1", "matheusuener.com.br volta para atos.dev.br");
 r = await worker.fetch(new Request(A + "/entrar?client_id=x"), env);
 checar(/frame-ancestors 'none'/.test(r.headers.get("content-security-policy")) && r.headers.get("x-frame-options") === "DENY", "/entrar nao pode ser emoldurada");
+{
+  // A contagem de visitas da Cloudflare: so nas paginas publicas (a politica de privacidade diz isso).
+  const csp = async (caminho) => (await worker.fetch(new Request(A + caminho), env)).headers.get("content-security-policy") || "";
+  const insights = /static\.cloudflareinsights\.com/;
+  checar(insights.test(await csp("/")) && insights.test(await csp("/privacidade/")) && /connect-src[^;]*cloudflareinsights\.com/.test(await csp("/")),
+    "as paginas publicas deixam a Cloudflare contar as visitas");
+  checar(!insights.test(await csp("/entrar/")) && !insights.test(await csp("/conta/")) && !insights.test(await csp("/pavlvs/assinar/")),
+    "entrar, a conta e o checkout continuam sem o script de visitas");
+}
 
 console.log("conta");
 r = await chamar("/api/cadastrar", { corpo: { email: "Joao@Escritorio.adv.br", senha: "curta1" } });
