@@ -1,7 +1,7 @@
 // Testes da Atos Cobranca (worker/cobranca/): o checkout, as assinaturas, as compras, os direitos e o
 // aviso do Mercado Pago - com o Mercado Pago simulado (nada vai a internet) e o objeto do cliente de verdade.
 //   node worker/cobranca/teste.mjs
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import worker from "../index.js";
 import { ClienteCobranca, idDoCliente, maisUmMes } from "./cliente.js";
 import { conferirPerfil, cnpjValido, cpfValido } from "./api.js";
@@ -141,6 +141,12 @@ checar(/script-src 'self' https:\/\/sdk\.mercadopago\.com/.test(csp) && /'sha256
   const corpo = await w.text();
   checar(w.status === 200 && corpo.includes("<script") && /'sha256-/.test(w.headers.get("content-security-policy") || "") && !w.headers.get("etag"),
     "com If-None-Match: a pagina inteira (200), com o hash, e sem ETag para o proximo pedido", { status: w.status, etag: w.headers.get("etag") });
+  // O arquivo com CRLF (salvo no Windows): o navegador troca por LF antes do hash, e o Worker tem de fazer igual.
+  const script = "var a = 1;\r\nvar b = 2;\r\n";
+  const envCrlf = { ...env, ASSETS: { fetch: async () => new Response("<html><script>" + script + "</script></html>", { headers: { "content-type": "text/html" } }) } };
+  const wc = await worker.fetch(new Request(A + "/pavlvs/assinar/"), envCrlf, {});
+  const doNavegador = "'sha256-" + createHash("sha256").update(script.replace(/\r\n/g, "\n")).digest("base64") + "'";
+  checar((wc.headers.get("content-security-policy") || "").includes(doNavegador), "script com CRLF: o hash e o que o navegador calcula (sobre LF)", wc.headers.get("content-security-policy"));
 }
 
 console.log("sem sessao, sem cobranca");

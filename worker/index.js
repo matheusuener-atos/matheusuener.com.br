@@ -63,7 +63,9 @@ async function comCspDoCheckout(resposta) {
   const html = await resposta.text();
   const hashes = [];
   for (const m of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
-    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(m[1]));
+    // O navegador troca CRLF e CR por LF antes de ler o HTML (o pre-processamento do HTML), e o hash e
+    // do texto ja trocado: o arquivo salvo no Windows teria outro hash, e o script seria bloqueado.
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(m[1].replace(/\r\n?/g, "\n")));
     hashes.push("'sha256-" + btoa(String.fromCharCode(...new Uint8Array(h))) + "'");
   }
   const r = new Response(html, resposta);
