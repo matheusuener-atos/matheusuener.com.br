@@ -222,7 +222,9 @@ const dataBR = (iso) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "A
    ate uma data, mais tempo so no mesmo plano, e a assinatura no cartao so depois do vencimento. */
 function conflito(oferta, situacao, assinando) {
   if (oferta.periodo === "avulso") return null;
-  if (situacao.viva) return erro(409, `você já tem uma assinatura do ${oferta.produtoNome}: troque o plano por ela`, "ja_assina");
+  if (situacao.viva) {
+    return erro(409, `você já assina o ${oferta.produtoNome}, e outra cobrança seria em dobro: para mudar de plano ou passar para o anual, cancele a assinatura em Minha conta › Assinaturas ou escreva para contato@atos.dev.br`, "ja_assina");
+  }
   if (situacao.pagoAte && assinando) {
     return erro(409, `o ${oferta.produtoNome} está pago até ${dataBR(situacao.pagoAte)}: a assinatura no cartão começa depois disso`, "pago_ate");
   }

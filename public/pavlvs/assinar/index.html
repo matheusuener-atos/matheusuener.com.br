@@ -127,7 +127,7 @@
       <select id="form-checkout__identificationType" data-mp-sdk-required-field="identificationType" hidden aria-hidden="true" tabindex="-1"></select>
       <p class="erro" id="ck-erro-cartao" role="alert"></p>
       <button type="submit" class="btn primario largo" id="form-checkout__submit" data-mp-subscription-cta="without-plan-authorized">Assinar</button>
-      <p class="nota">Na assinatura mensal, o Mercado Pago cobra o cartão todo mês. Você cancela quando quiser em Minha conta › Assinaturas.</p>
+      <p class="nota" id="ck-nota-assinatura">Na assinatura mensal, o Mercado Pago cobra o cartão todo mês. Você cancela quando quiser em Minha conta › Assinaturas.</p>
     </form>
 
     <!-- O Pix: o QR, o copia e cola e a situacao, que a tela consulta ate mudar. -->
@@ -179,6 +179,12 @@
     paused: ["Assinatura pausada", "A assinatura está pausada: reative em Minha conta › Assinaturas."],
     canceled: ["Assinatura cancelada", "Esta assinatura foi cancelada. Para voltar, assine de novo."],
   };
+  // O que a Atos recusa por regra (a cobranca em dobro, o plano fora de dia): tentar de novo nao muda nada.
+  var REGRAS = ["ja_assina", "pago_ate", "troca_de_plano", "sem_assinatura", "sem_perfil"];
+  function fraseDoErro(d, padrao) {
+    var t = d.erro || padrao;
+    return REGRAS.indexOf(d.codigo) >= 0 ? t.charAt(0).toUpperCase() + t.slice(1) + "." : t + ". Tente novamente.";
+  }
   var estado = { catalogo: null, plano: "escritorio", periodo: "mes", forma: "cartao", perfil: null, processando: false, cardForm: null, montado: false, aberto: false };
 
   function brl(centavos) { return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -212,6 +218,7 @@
       ? (estado.periodo === "mes" ? "Assinatura no cartão: cobrada todo mês, sem você fazer nada." : "O ano inteiro no cartão, em uma vez.")
       : (estado.periodo === "mes" ? "Um mês pago no Pix. No mês seguinte, você paga de novo (ou assina no cartão)." : "O ano inteiro no Pix.");
     $("form-checkout__submit").textContent = estado.periodo === "mes" ? "Assinar" : "Pagar o ano";
+    $("ck-nota-assinatura").hidden = !(estado.periodo === "mes" && estado.forma === "cartao");
     $("form-perfil").hidden = !estado.aberto || Boolean(estado.perfil);
     $("form-checkout").hidden = !(estado.aberto && estado.perfil && estado.forma === "cartao") || !$("ck-fim").hidden;
     $("ck-pix").hidden = !(estado.aberto && estado.perfil && estado.forma === "pix") || !$("ck-fim").hidden;
@@ -289,14 +296,14 @@
     desenhar();
     if (d._status >= 400 || d.erro) {
       // O token vale uma vez: para tentar de novo, o CardForm gera outro no proximo envio.
-      $("ck-erro-cartao").textContent = (d.erro || "não deu certo") + ". Tente novamente.";
+      $("ck-erro-cartao").textContent = fraseDoErro(d, "não deu certo");
       return;
     }
     if (mensal) {
       var s = SITUACAO[d.status] || SITUACAO.pending;
       fim(s[0], s[1]);
     } else if (d.status === "paga") {
-      fim("Pagamento aprovado", "O ano do PAVLVS está pago. A nota fiscal chega no seu e-mail.");
+      fim("Pagamento aprovado", "O ano do PAVLVS está pago.");
     } else {
       fim("Pagamento em análise", "O Mercado Pago está analisando o pagamento. O resultado aparece em Minha conta › Faturamento.");
     }
@@ -315,7 +322,7 @@
     estado.processando = false;
     botao.disabled = false;
     botao.textContent = "Gerar o Pix";
-    if (d._status >= 400 || !d.pix) { $("ck-erro-pix").textContent = (d.erro || "não deu para gerar o Pix") + ". Tente novamente."; return; }
+    if (d._status >= 400 || !d.pix) { $("ck-erro-pix").textContent = fraseDoErro(d, "não deu para gerar o Pix"); return; }
     $("ck-pix-gerar").hidden = true;
     $("ck-pix-codigo").hidden = false;
     $("ck-pix-qr").src = "data:image/png;base64," + d.pix.qr_code_base64;
@@ -326,7 +333,7 @@
     vigia = setInterval(async function () {
       if (Date.now() - inicio > 30 * 60 * 1000) { clearInterval(vigia); $("ck-pix-situacao").textContent = "Ainda esperando. Se já pagou, a confirmação aparece em Minha conta › Faturamento."; return; }
       var c = await pedir("/api/cobranca/v1/compras/" + encodeURIComponent(d.id));
-      if (c.status === "paga") { clearInterval(vigia); fim("Pagamento aprovado", "O Pix foi confirmado. A nota fiscal chega no seu e-mail."); }
+      if (c.status === "paga") { clearInterval(vigia); fim("Pagamento aprovado", "O Pix foi confirmado."); }
       else if (c.status === "vencida" || c.status === "cancelada" || c.status === "recusada") { clearInterval(vigia); $("ck-pix-situacao").textContent = "Este Pix venceu. Gere outro para pagar."; $("ck-pix-gerar").hidden = false; $("ck-pix-codigo").hidden = true; }
     }, 5000);
   }
