@@ -44,7 +44,7 @@
   "vars": {
     "APP_URL": "https://atos.dev.br",
     "MP_PUBLIC_KEY": "APP_USR-0bb20e6b-f846-4b8e-a267-12bfc8c7fc1a",
-    "PRODUTOS_ABERTOS": ""
+    "PRODUTOS_ABERTOS": "pavlvs"
   },
   // O Worker de teste: npx wrangler deploy --env teste -> atos-teste.<conta>.workers.dev. As credenciais da aba
   // Teste do app Atos Cobranca (nenhum dinheiro de verdade), as vendas abertas so aqui, e os eventos num receptor
