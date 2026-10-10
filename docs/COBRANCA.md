@@ -102,7 +102,7 @@ Decisão do dono, 09/10/2026: "criar tudo no Mercado Pago exclusivo Atos, e os s
     - reentrega em 1 min, 5 min, 30 min, 2 h e 12 h; esgotadas, "falhou";
   - **a reserva** `GET /api/cobranca/v1/direitos`, com Bearer do mesmo segredo;
   - **o mês**: a mesma conta do PAVLVS (`maisUmMes`, 31/01 → 28/02, um mês de cada vez), para o "pago até" e o fim do ciclo do produto caírem no mesmo dia;
-  - **os testes**: 54, em `worker/cobranca/teste.mjs`.
+  - **os testes**: 53, em `worker/cobranca/teste.mjs`.
 - **Etapa 4 feita no coryphaeus** (`worker/atos.js`, `node worker/teste-atos.mjs`, 45 ok):
   - **`POST /api/atos/eventos`**: confere a assinatura e aplica no ContaIA:
     - `atos_direito`, só versão maior;
