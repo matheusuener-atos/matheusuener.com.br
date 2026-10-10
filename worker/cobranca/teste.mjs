@@ -290,7 +290,7 @@ const versoes = direitosEv.map((e) => e.dados.versao);
 checar(direitosEv.length >= 3 && versoes.every((v, i) => i === 0 || v > versoes[i - 1]), "direito.atualizado com a versao sempre crescendo", versoes);
 const ultimo = direitosEv[direitosEv.length - 1];
 checar(ultimo.conta.sub === "pv-dona" && ultimo.conta.email === "dona@escritorio.adv.br" && ultimo.produto === "pavlvs" && ultimo.dados.assinatura.status === "canceled"
-  && ultimo.dados.plano === "escritorio" && ultimo.dados.metadados.tokens_por_ciclo === 60000000 && ultimo.dados.ate && ["mes", "ano"].includes(ultimo.dados.periodo),
+  && ultimo.dados.plano === "escritorio" && ultimo.dados.metadados.tokens_por_ciclo === 60000000 && ultimo.dados.ate && ["mes", "ano"].includes(ultimo.dados.periodo) && ["assinatura", "compra"].includes(ultimo.dados.pago_por),
   "o ultimo retrato: de quem e, o plano com os metadados, ate quando, o periodo que pagou, a assinatura cancelada", ultimo);
 const credito = recebidos.find((x) => x.ev.tipo === "credito.adicionado");
 checar(credito && credito.ev.dados.origem === "order:ORD0" && credito.ev.dados.metadados.tokens === 10000000, "credito.adicionado: a recarga com a origem e os tokens", credito && credito.ev.dados);

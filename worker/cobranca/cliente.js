@@ -137,6 +137,8 @@ export class ClienteCobranca {
           r.ate = new Date(ate).toISOString();
           // O que pagou o direito de agora: o ano, ou um mes (a assinatura no cartao ou o mes no Pix).
           r.periodo = d.meses === 12 ? "ano" : "mes";
+          // Quem pagou: a cobranca da assinatura (ap:) ou uma compra a parte (order:, o ano ou o mes no Pix).
+          r.pago_por = String(d.origem).startsWith("ap:") ? "assinatura" : "compra";
         }
         if (d.credito) r.creditos = [...(antes.creditos || []), { ...d.credito, origem: d.origem, quando: agora }].slice(-50);
         await s.put(chave, r);
@@ -165,7 +167,7 @@ export class ClienteCobranca {
     const a = vivas.find((x) => VIVAS.includes(x.status)) || vivas[0] || null;
     return {
       versao: dir.versao || 0, plano: dir.plano || (a && a.plano) || null, metadados: dir.metadados || null, ate: dir.ate || null,
-      periodo: dir.periodo || null,
+      periodo: dir.periodo || null, pago_por: dir.pago_por || null,
       assinatura: a ? { id: a.ref, status: a.status, proxima: a.proxima || null, preco: a.preco } : null,
     };
   }
