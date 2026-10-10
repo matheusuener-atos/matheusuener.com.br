@@ -11,6 +11,7 @@ import { atenderConta, ehRotaDaConta } from "./contas.js";
 import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
 import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
 import { atenderCobranca, ehRotaDaCobranca } from "./cobranca.js";
+import { atenderCobrancaPavlvs, ehRotaDaCobrancaPavlvs } from "./cobranca-pavlvs.js";
 
 const CSP_CONTA = [
   "default-src 'self'",
@@ -50,7 +51,7 @@ function comCabecalhos(resposta, conta) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.hostname !== "atos.dev.br" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
       return Response.redirect(EMISSOR + url.pathname + url.search, 301);
@@ -61,6 +62,9 @@ export default {
         if (url.pathname.startsWith("/api/") && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderOIDC(request, env, url, { dentroDoLimite }));
       }
+      // A cobranca do PAVLVS (o motor de worker/pavlvs/, docs/MIGRACAO-COBRANCA.md): as rotas e as
+      // protecoes sao as dele (a origem, a sessao pv_conta, a assinatura do aviso do Mercado Pago).
+      if (ehRotaDaCobrancaPavlvs(url)) return await atenderCobrancaPavlvs(request, env, ctx);
       if (ehRotaDaCobranca(url)) {
         if (!mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderCobranca(request, env, url));

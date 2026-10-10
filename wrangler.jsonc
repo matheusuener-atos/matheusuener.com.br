@@ -4,6 +4,12 @@
 // Segredos (npx wrangler secret put <NOME>):
 //   ATOS_CHAVE      a JWK privada que assina os id_token (tools/gerar-chave.mjs)
 //   RESEND_API_KEY  o envio dos codigos por e-mail (dominio atos.dev.br verificado no Resend)
+//
+// A cobranca do PAVLVS (worker/pavlvs/, docs/MIGRACAO-COBRANCA.md) pede mais tres, os mesmos do Worker
+// "paulus" (o dono copia do painel do Mercado Pago e do que gravou la):
+//   MP_ACCESS_TOKEN    o token de producao do app do Mercado Pago (cobrar, assinar, devolver)
+//   MP_WEBHOOK_SECRET  a assinatura secreta do webhook (o aviso de pagamento em /api/mp/aviso)
+//   ID_SEGREDO         o do token HS256 da senha de antes (o PAULUS instalado antigo); o mesmo valor nos dois Workers
 {
   "name": "atos",
   "compatibility_date": "2026-09-25",
@@ -31,5 +37,27 @@
   // "atos:*" (sessoes, permissoes, codigos e tokens) so deste Worker.
   "kv_namespaces": [{ "binding": "CONTAS", "id": "c8011a70799b40b0b3215f4a01b2d28c" }],
   "ratelimits": [{ "name": "LIMITE", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // A cobranca do PAVLVS roda aqui sobre os registros que ainda sao do Worker "paulus": cada conta e
+  // um ContaIA (assinatura, ciclos, creditos, faturas e o uso da IA juntos) e as notas sao do
+  // EmissorNFSe. Os dois chegam por script_name; mudar de dono e a etapa 6 do plano.
+  "durable_objects": { "bindings": [
+    { "name": "CONTAS_IA", "class_name": "ContaIA", "script_name": "paulus" },
+    { "name": "EMISSOR_NFSE", "class_name": "EmissorNFSe", "script_name": "paulus" }
+  ] },
+  // O certificado A1 da NFS-e chega a Sefin pelo Worker auxiliar (worker/pavlvs/nfse/MTLS.md).
+  "services": [{ "binding": "SEFIN_MTLS", "service": "paulus-nfse-mtls" }],
+  // As vars do motor: as mesmas do Worker "paulus" (nenhuma e segredo). EMAIL_DE: os e-mails da
+  // cobranca saem da Atos. EMISSOR_NO_PAVLVS: a NFSE_CHAVE_MESTRA e do emissor, la.
+  "vars": {
+    "IA_ATIVA": "1",
+    "MP_PUBLIC_KEY": "APP_USR-a8fb9ba1-3a56-4388-a1de-de353a72a01f",
+    "IA_CORTESIA": "d64e139883ea6f7246380d9c3c9c35a5bdef62163e768d103527cc4c003fd04f",
+    "IA_MAX_SAIDA": "8000", "IA_MAX_ENTRADA_CARACTERES": "240000", "IA_POR_MINUTO": "40",
+    "GOOGLE_CLIENT_IDS": "834374999044-k6ci1409n2i95m3akqkc23bfc2m8ujpe.apps.googleusercontent.com,834374999044-278vmq8hd7th777q084u0rthand7e1jn.apps.googleusercontent.com",
+    "ATOS_JWKS": "[{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"de_6JI9TCEXk78hRFEzffNeJiuHC9cm7gHiXtUol6sQ\",\"y\":\"Gwu29O1smT_j9HCn6fYXdjReM-Pi76jGH5wKYN8OSRE\",\"kid\":\"atos-2026-10-09\",\"alg\":\"ES256\",\"use\":\"sig\"}]",
+    "CF_ACCOUNT_ID": "54164f67b5d5eb33c0a1d325dfebb449",
+    "EMAIL_DE": "Atos <pagamentos@atos.dev.br>",
+    "EMISSOR_NO_PAVLVS": "1"
+  }
 }
