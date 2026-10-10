@@ -13,6 +13,8 @@
 //   GET  /api/subscriptions/:id                  uma assinatura, conferida no Mercado Pago (id = a ref)
 //   POST /api/subscriptions/:id/(pause|reactivate|cancel)   pausar, reativar, cancelar
 //   POST /api/mp/aviso                           o webhook do Mercado Pago (assinatura HMAC conferida)
+//   GET  /api/cobranca/v1/direitos?produto=&sub= o retrato do direito, para o produto (Bearer com o segredo
+//                                                dele): a reserva quando um evento se perde (eventos.js)
 //
 // O aviso nunca e a verdade: o recurso e buscado no Mercado Pago antes de mudar qualquer coisa, e cada
 // pagamento estende o direito uma vez so (pela origem). As mudancas de estado ficam no objeto do cliente.
@@ -21,6 +23,7 @@ import { json, lerJson } from "../comum.js";
 import { sessaoDe } from "../contas.js";
 import { catalogoPublico, MOEDA, produtoAberto, resolveOffer, voltaPermitida } from "./catalogo.js";
 import { cliente, clienteDaRef, idDoCliente, novaRef } from "./cliente.js";
+import { segredoDo } from "./eventos.js";
 import { criarPreapproval, ErroMP, fraseDaRecusa, mpFetch } from "./mp.js";
 
 const ACOES = { pause: "paused", reactivate: "authorized", cancel: "cancelled" }; // cancel -> canceled (a API grafa "cancelled")
@@ -58,6 +61,17 @@ export async function atenderCobrancaV1(request, env, url, deps = {}) {
 
   if (p === "/api/mp/aviso") return receberAviso(request, env, url, deps);
 
+  if (p === "/api/cobranca/v1/direitos" && request.method === "GET") {
+    // So o produto (o segredo dele, o mesmo dos eventos), e so o direito a ele.
+    const produto = url.searchParams.get("produto") || "";
+    const segredo = segredoDo(env, produto);
+    const m = /^Bearer\s+(\S+)$/.exec(request.headers.get("authorization") || "");
+    if (!segredo || !m || !iguais(m[1], segredo)) return erro(401, "produto não autenticado");
+    const sub = url.searchParams.get("sub") || "";
+    if (!sub || sub.length > 200) return erro(400, "falta o sub");
+    return json({ produto, sub, ...(await cliente(env, await idDoCliente(sub)).pedir("retrato", { produto })).retrato });
+  }
+
   const mCat = /^\/api\/cobranca\/v1\/catalogo\/([a-z0-9-]{1,32})$/.exec(p);
   if (mCat && request.method === "GET") {
     const c = catalogoPublico(mCat[1]);
@@ -69,7 +83,7 @@ export async function atenderCobrancaV1(request, env, url, deps = {}) {
   const s = await sessaoDe(request, env);
   if (!s) return erro(401, "entre na sua conta Atos");
   const cid = await idDoCliente(s.sub);
-  const meu = cliente(env, cid);
+  const meu = cliente(env, cid, { sub: s.sub, email: s.email });
 
   try {
     if (p === "/api/cobranca/v1/cliente") {
@@ -176,21 +190,46 @@ async function preparar(env, meu, precoId) {
   if (!produtoAberto(env, oferta.produto)) return { falha: erro(409, `o ${oferta.produtoNome} ainda não vende pela Atos`, "produto_fechado") };
   const perfil = (await meu.pedir("perfil_ler")).perfil;
   if (!perfil) return { falha: erro(409, "preencha os dados para a nota fiscal antes de pagar", "sem_perfil") };
-  return { oferta, perfil };
+  return { oferta, perfil, situacao: await situacaoDoProduto(meu, oferta.produto) };
+}
+
+const VIVAS = ["authorized", "pending", "paused", "criando"];
+
+/* O que a pessoa ja tem do produto: a assinatura viva (se houver) e ate quando esta pago. */
+async function situacaoDoProduto(meu, produto) {
+  const viva = (await meu.pedir("listar")).assinatura.find((a) => a.produto === produto && VIVAS.includes(a.status)) || null;
+  const dir = (await meu.pedir("direitos")).direitos.find((x) => x.produto === produto) || null;
+  const pagoAte = dir && dir.ate && Date.parse(dir.ate) > Date.now() ? dir.ate : null;
+  return { viva, pagoAte, plano: dir && dir.plano };
+}
+
+const dataBR = (iso) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+/* As regras de uma cobranca de periodo (mes ou ano), para nunca cobrar em dobro nem deixar o plano ambiguo:
+   com assinatura viva, so a recarga se compra a parte (o plano se troca pela assinatura); com o produto pago
+   ate uma data, mais tempo so no mesmo plano, e a assinatura no cartao so depois do vencimento. */
+function conflito(oferta, situacao, assinando) {
+  if (oferta.periodo === "avulso") return null;
+  if (situacao.viva) return erro(409, `você já tem uma assinatura do ${oferta.produtoNome}: troque o plano por ela`, "ja_assina");
+  if (situacao.pagoAte && assinando) {
+    return erro(409, `o ${oferta.produtoNome} está pago até ${dataBR(situacao.pagoAte)}: a assinatura no cartão começa depois disso`, "pago_ate");
+  }
+  if (situacao.pagoAte && situacao.plano && situacao.plano !== oferta.metadados.plano) {
+    return erro(409, `o ${oferta.produtoNome} está pago até ${dataBR(situacao.pagoAte)} no outro plano: para trocar, espere o vencimento ou fale com contato@atos.dev.br`, "troca_de_plano");
+  }
+  return null;
 }
 
 /* A mensalidade no cartao: uma assinatura sem plano, ja autorizada com o token do cartao. */
 async function assinar(request, env, s, cid, meu, op) {
   const d = (await lerJson(request)) || {};
-  const { oferta, perfil, falha } = await preparar(env, meu, d.preco);
+  const { oferta, perfil, situacao, falha } = await preparar(env, meu, d.preco);
   if (falha) return falha;
   if (oferta.periodo !== "mes") return erro(400, "a assinatura é da mensalidade; o ano e o Pix são pagamento único");
   if (!/^[A-Za-z0-9]{16,64}$/.test(String(d.token || ""))) return erro(400, "o cartão não foi lido: preencha de novo", "sem_token");
-  // Uma assinatura viva por produto: a segunda seria cobranca em dobro.
-  const lista = (await meu.pedir("listar")).assinatura;
-  if (lista.some((a) => a.produto === oferta.produto && ["authorized", "pending", "paused", "criando"].includes(a.status))) {
-    return erro(409, `você já tem uma assinatura do ${oferta.produtoNome}: troque o plano por ela`, "ja_assina");
-  }
+  // Uma assinatura viva por produto, e nenhuma por cima de um periodo ja pago: seria cobranca em dobro.
+  const barrado = conflito(oferta, situacao, true);
+  if (barrado) return barrado;
   const ref = novaRef(cid, "assinatura");
   await meu.pedir("registrar", { tipo: "assinatura", registro: { ref, produto: oferta.produto, preco: oferta.id, plano: oferta.metadados.plano,
     centavos: oferta.centavos, forma: "cartao", status: "criando" } });
@@ -216,16 +255,15 @@ async function assinar(request, env, s, cid, meu, op) {
 /* O pagamento unico (Orders API): o ano no cartao ou no Pix, o mes no Pix, a recarga no Pix. */
 async function pagar(request, env, s, cid, meu, op) {
   const d = (await lerJson(request)) || {};
-  const { oferta, perfil, falha } = await preparar(env, meu, d.preco);
+  const { oferta, perfil, situacao, falha } = await preparar(env, meu, d.preco);
   if (falha) return falha;
   const forma = d.forma === "cartao" ? "cartao" : d.forma === "pix" ? "pix" : "";
   if (!forma || !oferta.formas.includes(forma)) return erro(400, "forma de pagamento não aceita para este preço");
   if (oferta.periodo === "mes" && forma === "cartao") return erro(400, "a mensalidade no cartão é assinatura (/assinar)");
   if (forma === "cartao" && !/^[A-Za-z0-9]{16,64}$/.test(String(d.token || ""))) return erro(400, "o cartão não foi lido: preencha de novo", "sem_token");
-  if (oferta.requer_assinatura) {
-    const dir = (await meu.pedir("direitos")).direitos.find((x) => x.produto === oferta.produto);
-    if (!dir || !dir.ate || Date.parse(dir.ate) < Date.now()) return erro(409, `a recarga é para quem tem o ${oferta.produtoNome} em dia`, "sem_assinatura");
-  }
+  const barrado = conflito(oferta, situacao, false);
+  if (barrado) return barrado;
+  if (oferta.requer_assinatura && !situacao.pagoAte) return erro(409, `a recarga é para quem tem o ${oferta.produtoNome} em dia`, "sem_assinatura");
   const ref = novaRef(cid, "compra");
   await meu.pedir("registrar", { tipo: "compra", registro: { ref, produto: oferta.produto, preco: oferta.id, plano: oferta.metadados.plano,
     periodo: oferta.periodo, centavos: oferta.centavos, forma, status: "criando" } });
@@ -275,9 +313,10 @@ export async function aplicarOrder(env, order) {
   if (status === "paga") {
     // O direito: o ano e o mes estendem o produto; a recarga soma creditos. Uma vez por pagamento.
     const origem = "order:" + order.id;
-    if (c.periodo === "ano") await meu.pedir("estender", { produto: c.produto, plano: c.plano, meses: 12, origem });
-    else if (c.periodo === "mes") await meu.pedir("estender", { produto: c.produto, plano: c.plano, meses: 1, origem });
-    else await meu.pedir("estender", { produto: c.produto, origem, credito: { preco: c.preco, centavos: c.centavos } });
+    const metadados = (resolveOffer(c.preco) || {}).metadados || null;
+    if (c.periodo === "ano") await meu.pedir("estender", { produto: c.produto, plano: c.plano, metadados, meses: 12, origem });
+    else if (c.periodo === "mes") await meu.pedir("estender", { produto: c.produto, plano: c.plano, metadados, meses: 1, origem });
+    else await meu.pedir("estender", { produto: c.produto, origem, credito: { preco: c.preco, centavos: c.centavos, metadados } });
   }
   return c;
 }
@@ -303,7 +342,8 @@ export async function aplicarCobrancaRecorrente(env, ap, op) {
   const aprovado = ap.payment && ap.payment.status === "approved";
   if (aprovado) {
     const dono = clienteDaRef(assinatura.ref);
-    await cliente(env, dono.clienteId).pedir("estender", { produto: assinatura.produto, plano: assinatura.plano, meses: 1, origem: "ap:" + ap.id });
+    await cliente(env, dono.clienteId).pedir("estender", { produto: assinatura.produto, plano: assinatura.plano,
+      metadados: (resolveOffer(assinatura.preco) || {}).metadados || null, meses: 1, origem: "ap:" + ap.id });
   }
   return assinatura;
 }

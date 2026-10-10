@@ -37,6 +37,8 @@ export const PRODUTOS = {
     site: "https://paulus.ia.br",
     // Para onde a pessoa volta depois de pagar (so estes; o ?volta= que nao bater vira o site).
     voltas: ["https://paulus.ia.br/", "https://paulus.ia.br/minha-conta/"],
+    // Onde o produto recebe os eventos (worker/cobranca/eventos.js); o segredo e EVENTOS_SEGREDO_PAVLVS.
+    eventos: "https://paulus.ia.br/api/atos/eventos",
     precos: precosDoPavlvs(),
   },
 };

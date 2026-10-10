@@ -7,6 +7,7 @@ import { ClienteCobranca, idDoCliente } from "./cliente.js";
 import { conferirPerfil, cnpjValido, cpfValido } from "./api.js";
 import { resolveOffer } from "./catalogo.js";
 import { sha256 } from "../comum.js";
+import { verificarEvento } from "./eventos.js";
 
 let falhas = 0;
 function checar(cond, texto, extra) {
@@ -24,28 +25,32 @@ const CONTAS = {
 function storage() {
   const m = new Map();
   return {
+    alarme: null,
     async get(k) { return m.has(k) ? structuredClone(m.get(k)) : undefined; },
     async put(k, v) { m.set(k, structuredClone(v)); },
     async list({ prefix = "" } = {}) { return new Map([...m].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, structuredClone(v)])); },
+    async setAlarm(t) { this.alarme = t; },
   };
 }
 const objetos = new Map();
 const CLIENTES = {
   idFromName: (n) => n,
   get(id) {
-    if (!objetos.has(id)) objetos.set(id, new ClienteCobranca({ storage: storage() }, {}));
+    if (!objetos.has(id)) objetos.set(id, new ClienteCobranca({ storage: storage() }, env));
     return { fetch: (url, op) => objetos.get(id).fetch(new Request(url, op)) };
   },
 };
 const env = {
   CONTAS, CLIENTES, APP_URL: "https://atos.dev.br", MP_PUBLIC_KEY: "PUBLICA-DE-TESTE", MP_ACCESS_TOKEN: "segredo-mp",
-  MP_WEBHOOK_SECRET: "segredo-do-aviso", PRODUTOS_ABERTOS: "pavlvs",
+  MP_WEBHOOK_SECRET: "segredo-do-aviso", PRODUTOS_ABERTOS: "pavlvs", EVENTOS_SEGREDO_PAVLVS: "segredo-dos-eventos",
   ASSETS: { fetch: async (req) => new Response(String(new URL(req.url).pathname).includes("assinar")
     ? '<html><script src="https://sdk.mercadopago.com/js/v2"></script><script>var x = 1;</script></html>' : "<p>pagina</p>",
     { headers: { "content-type": "text/html" } }) },
 };
 
 const mp = { pedidos: [], orders: new Map(), preapprovals: new Map(), authorized: new Map(), recusar: null };
+// O produto (o PAVLVS) recebendo os eventos: o que chegou e o status que ele responde.
+const produto = { recebidos: [], responde: 200 };
 globalThis.fetch = async (url, op = {}) => {
   url = String(url);
   const corpo = op.body ? JSON.parse(op.body) : null;
@@ -78,6 +83,10 @@ globalThis.fetch = async (url, op = {}) => {
   m = /\/authorized_payments\/([^/?]+)$/.exec(url);
   if (m) return mp.authorized.has(m[1]) ? resp(mp.authorized.get(m[1])) : resp({}, 404);
   if (url.startsWith("https://api.resend.com")) return resp({});
+  if (url === "https://paulus.ia.br/api/atos/eventos") {
+    produto.recebidos.push({ corpo: op.body, assinatura: op.headers["Atos-Assinatura"], id: op.headers["Atos-Evento"] });
+    return new Response("{}", { status: produto.responde });
+  }
   throw new Error("fetch inesperado: " + url);
 };
 
@@ -212,20 +221,87 @@ const dirNova = (await r.r.json()).direitos.find((x) => x.produto === "pavlvs");
 const meses = dirNova && (Date.parse(dirNova.ate) - Date.now()) / 86400000;
 checar(dirNova && dirNova.plano === "advogado" && meses > 360 && meses < 370, "o aviso do Pix pago: o PAVLVS fica pago por um ano", dirNova);
 
+console.log("nunca cobrar em dobro");
+r = await chamar("/api/cobranca/v1/pagar", { metodo: "POST", corpo: { preco: "pavlvs.plus.ano", forma: "pix" } });
+checar(r.status === 409 && r.d.codigo === "ja_assina", "com a assinatura viva, o ano a parte e recusado (o plano se troca pela assinatura)", r.d);
+async function comoNova(caminho, corpo) {
+  const x = await worker.fetch(new Request(A + caminho, { method: "POST", headers: { cookie: outraConta, origin: A, "content-type": "application/json" }, body: JSON.stringify(corpo) }), env, {});
+  return { status: x.status, d: await x.json() };
+}
+r = await comoNova("/api/cobranca/v1/assinar", { preco: "pavlvs.advogado.mes", token: "tok".repeat(8) });
+checar(r.status === 409 && r.d.codigo === "pago_ate", "com o ano pago, a assinatura no cartao so depois do vencimento", r.d);
+r = await comoNova("/api/cobranca/v1/pagar", { preco: "pavlvs.plus.ano", forma: "pix" });
+checar(r.status === 409 && r.d.codigo === "troca_de_plano", "com o ano pago num plano, comprar outro plano e recusado", r.d);
+
 console.log("o ano no cartao, recusado e aprovado");
 mp.recusar = "cc_rejected_insufficient_amount";
-r = await chamar("/api/cobranca/v1/pagar", { metodo: "POST", corpo: { preco: "pavlvs.plus.ano", forma: "cartao", token: "tok".repeat(8), paymentMethodId: "visa" } });
+r = await comoNova("/api/cobranca/v1/pagar", { preco: "pavlvs.advogado.ano", forma: "cartao", token: "tok".repeat(8), paymentMethodId: "visa" });
 checar(r.status === 402 && /limite/.test(r.d.erro), "cartao recusado: a frase do motivo", r.d);
 mp.recusar = null;
-r = await chamar("/api/cobranca/v1/pagar", { metodo: "POST", corpo: { preco: "pavlvs.plus.ano", forma: "cartao", token: "tok".repeat(8), paymentMethodId: "visa" } });
+r = await comoNova("/api/cobranca/v1/pagar", { preco: "pavlvs.advogado.ano", forma: "cartao", token: "tok".repeat(8), paymentMethodId: "visa" });
 const cartao = mp.pedidos.filter((x) => x.url.endsWith("/v1/orders")).pop().corpo.transactions.payments[0].payment_method;
 checar(r.status === 200 && r.d.status === "paga" && cartao.installments === 1 && cartao.type === "credit_card" && !("issuer_id" in cartao), "ano no cartao: uma parcela, sem issuer_id", { status: r.d.status, cartao });
+const doisAnos = (await (await worker.fetch(new Request(A + "/api/cobranca/v1/minhas", { headers: { cookie: outraConta } }), env, {})).json()).direitos.find((x) => x.produto === "pavlvs");
+const dias = (Date.parse(doisAnos.ate) - Date.now()) / 86400000;
+checar(dias > 725 && dias < 735, "mais um ano no mesmo plano: soma ao que ja estava pago", { ate: doisAnos.ate });
 r = await chamar("/api/cobranca/v1/pagar", { metodo: "POST", corpo: { preco: "pavlvs.plus.mes", forma: "cartao", token: "tok".repeat(8) } });
 checar(r.status === 400, "a mensalidade no cartao nao e pagamento unico (e assinatura)");
 
 console.log("cancelar");
 r = await chamar("/api/subscriptions/" + assinatura + "/cancel", { metodo: "POST", corpo: {} });
 checar(r.status === 200 && r.d.status === "canceled" && mp.preapprovals.get("pre-0").status === "cancelled", "cancelar: canceled na Atos (cancelled no Mercado Pago)", r.d);
+
+console.log("os eventos para o produto");
+const objDona = objetos.get(cid);
+produto.recebidos.length = 0;
+await objDona.alarm();
+const recebidos = produto.recebidos.map((x) => ({ ...x, ev: JSON.parse(x.corpo) }));
+const assinados = await Promise.all(produto.recebidos.map((x) => verificarEvento("segredo-dos-eventos", x.corpo, x.assinatura)));
+checar(recebidos.length > 0 && assinados.every(Boolean) && recebidos.every((x) => x.id === x.ev.id), "o alarme entrega a fila ao PAVLVS, cada evento assinado (HMAC) e com o id no cabecalho", recebidos.length);
+const direitosEv = recebidos.filter((x) => x.ev.tipo === "direito.atualizado").map((x) => x.ev);
+const versoes = direitosEv.map((e) => e.dados.versao);
+checar(direitosEv.length >= 3 && versoes.every((v, i) => i === 0 || v > versoes[i - 1]), "direito.atualizado com a versao sempre crescendo", versoes);
+const ultimo = direitosEv[direitosEv.length - 1];
+checar(ultimo.conta.sub === "pv-dona" && ultimo.conta.email === "dona@escritorio.adv.br" && ultimo.produto === "pavlvs" && ultimo.dados.assinatura.status === "canceled"
+  && ultimo.dados.plano === "escritorio" && ultimo.dados.metadados.tokens_por_ciclo === 60000000 && ultimo.dados.ate,
+  "o ultimo retrato: de quem e, o plano com os metadados, ate quando, a assinatura cancelada", ultimo);
+const credito = recebidos.find((x) => x.ev.tipo === "credito.adicionado");
+checar(credito && credito.ev.dados.origem === "order:ORD0" && credito.ev.dados.metadados.tokens === 10000000, "credito.adicionado: a recarga com a origem e os tokens", credito && credito.ev.dados);
+checar(!(await verificarEvento("segredo-dos-eventos", produto.recebidos[0].corpo.replace("pavlvs", "outro"), produto.recebidos[0].assinatura))
+  && !(await verificarEvento("outro-segredo", produto.recebidos[0].corpo, produto.recebidos[0].assinatura)),
+  "verificarEvento recusa corpo mexido e outro segredo");
+produto.recebidos.length = 0;
+await objDona.alarm();
+checar(produto.recebidos.length === 0, "o que ja foi entregue nao vai de novo");
+
+console.log("o produto fora do ar: a Atos tenta de novo");
+produto.responde = 503;
+await chamar("/api/subscriptions/" + assinatura + "/reactivate", { metodo: "POST", corpo: {} });
+await objDona.alarm();
+let fila = (await chamar("/api/cobranca/v1/minhas")).d;
+let evs = (await (await CLIENTES.get(cid).fetch("https://cliente/", { method: "POST", body: JSON.stringify({ op: "eventos" }) })).json()).eventos;
+let pendente = evs.find((e) => e.estado === "pendente");
+checar(pendente && pendente.tentativas === 1 && pendente.ultimo.status === 503 && pendente.proxima > Date.now() + 50000 && objDona.ctx.storage.alarme === pendente.proxima,
+  "503: fica pendente, com a proxima tentativa em 1 minuto e o alarme marcado", pendente);
+const agoraReal = Date.now;
+for (let i = 0; i < 5; i++) {
+  Date.now = () => agoraReal() + 2 * 86400000 * (i + 1);
+  await objDona.alarm();
+}
+Date.now = agoraReal;
+evs = (await (await CLIENTES.get(cid).fetch("https://cliente/", { method: "POST", body: JSON.stringify({ op: "eventos" }) })).json()).eventos;
+const falhou = evs.find((e) => e.evento.id === pendente.evento.id);
+checar(falhou.estado === "falhou" && falhou.tentativas === 6, "esgotadas as 5 reentregas: falhou (o painel mostra)", { estado: falhou.estado, tentativas: falhou.tentativas });
+produto.responde = 200;
+
+console.log("a reserva: o produto pergunta os direitos");
+r = await chamar("/api/cobranca/v1/direitos?produto=pavlvs&sub=pv-dona", { semCookie: true, headers: { authorization: "Bearer segredo-dos-eventos" } });
+checar(r.status === 200 && r.d.sub === "pv-dona" && r.d.plano === "escritorio" && r.d.versao >= versoes[versoes.length - 1] && r.d.assinatura.status === "authorized",
+  "com o segredo do produto: o retrato de agora", r.d);
+r = await chamar("/api/cobranca/v1/direitos?produto=pavlvs&sub=pv-dona", { semCookie: true, headers: { authorization: "Bearer outro" } });
+checar(r.status === 401, "sem o segredo certo: 401");
+r = await chamar("/api/cobranca/v1/direitos?produto=pavlvs&sub=pv-dona", { headers: { authorization: "" } });
+checar(r.status === 401, "a sessao da pessoa nao abre os direitos de produto: 401");
 
 console.log(falhas ? "\n" + falhas + " falha(s)" : "\ntudo certo");
 process.exit(falhas ? 1 : 0);
