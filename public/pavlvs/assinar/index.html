@@ -241,7 +241,7 @@
     var t = d.erro || padrao;
     return REGRAS.indexOf(d.codigo) >= 0 ? t.charAt(0).toUpperCase() + t.slice(1) + "." : t + ". Tente novamente.";
   }
-  var estado = { catalogo: null, plano: "escritorio", periodo: "mes", forma: "cartao", perfil: null, processando: false, cardForm: null, montado: false, aberto: false, etapa: "plano", fim: false };
+  var estado = { catalogo: null, plano: "escritorio", periodo: "mes", forma: "cartao", perfil: null, pagoAte: null, processando: false, cardForm: null, montado: false, aberto: false, etapa: "plano", fim: false };
 
   function brl(centavos) { return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
   function precoDe(plano, periodo) {
@@ -271,12 +271,31 @@
     var m = precoDe(plano, "mes"), a = precoDe(plano, "ano");
     return m && a ? Math.max(0, m.centavos * 12 - a.centavos) : 0;
   }
-  function cicloTexto() {
+  /* Um mes depois, no mesmo dia ou no ultimo do mes (31/01 -> 28/02), um mes de cada vez: a mesma conta do
+     servidor (worker/cobranca/cliente.js, maisUmMes), para a tela dizer a data que ele grava. */
+  function maisMeses(ms, n) {
+    for (var i = 0; i < n; i++) {
+      var d = new Date(ms), dia = d.getUTCDate();
+      d.setUTCMonth(d.getUTCMonth() + 1);
+      if (d.getUTCDate() < dia) d.setUTCDate(0);
+      ms = d.getTime();
+    }
+    return ms;
+  }
+  /* Ate quando o produto ja esta pago (o direito na Atos), se ainda vale: quem renova soma ao fim dele. */
+  async function lerPagoAte() {
+    var c = await pedir("/api/cobranca/v1/conta");
+    var x = (c.produtos || []).filter(function (p) { return p.produto === PRODUTO; })[0];
+    var ate = x && x.direito && x.direito.ate;
+    estado.pagoAte = ate && Date.parse(ate) > Date.now() ? ate : null;
+  }
+  /* O ciclo do que se esta comprando. `pago`: o pagamento ja aconteceu, e a data e a que o servidor gravou. */
+  function cicloTexto(pago) {
     var hoje = new Date();
     if (estado.periodo === "mes" && estado.forma === "cartao") return "Mensal, renova todo dia " + hoje.getDate();
-    var ate = new Date(hoje);
-    if (estado.periodo === "ano") ate.setFullYear(ate.getFullYear() + 1); else ate.setMonth(ate.getMonth() + 1);
-    return (estado.periodo === "ano" ? "Anual" : "Um mês") + ", pago de uma vez · vale até " + dataBR(ate);
+    var ate = pago && estado.pagoAte ? Date.parse(estado.pagoAte)
+      : maisMeses(estado.pagoAte ? Date.parse(estado.pagoAte) : Date.now(), estado.periodo === "ano" ? 12 : 1);
+    return (estado.periodo === "ano" ? "Anual" : "Um mês") + ", pago de uma vez · vale até " + dataBR(new Date(ate));
   }
   function nomeDoPlano(p) { return p.nome.replace(/^PAVLVS /, "").replace(/ · anual$/, ""); }
   function pessoas(p) { var n = (p.metadados || {}).pessoas || 1; return n === 1 ? "1 usuário" : "Até " + n + " usuários"; }
@@ -443,7 +462,8 @@
       var s = SITUACAO[d.status] || SITUACAO.pending;
       fim(s[0], s[1], s[2], s[3]);
     } else if (d.status === "paga") {
-      fim("Pagamento aprovado", "O ano do PAVLVS está pago.", "Ativa", "");
+      await lerPagoAte();
+      fim("Pagamento aprovado", "O ano do PAVLVS está pago.", "Ativa", "", true);
     } else {
       fim("Pagamento em análise", "O Mercado Pago está analisando o pagamento. O resultado aparece em Minha conta › Faturamento.", "Em análise", "neutro");
     }
@@ -476,17 +496,17 @@
     vigia = setInterval(async function () {
       if (Date.now() - inicio > 30 * 60 * 1000) { clearInterval(vigia); $("ck-pix-situacao-texto").textContent = "Ainda esperando. Se já pagou, a confirmação aparece em Minha conta › Faturamento."; return; }
       var c = await pedir("/api/cobranca/v1/compras/" + encodeURIComponent(d.id));
-      if (c.status === "paga") { clearInterval(vigia); fim("Pagamento confirmado", "Recebemos o seu Pix. O PAVLVS está liberado nesta conta.", "Ativa", ""); }
+      if (c.status === "paga") { clearInterval(vigia); await lerPagoAte(); fim("Pagamento confirmado", "Recebemos o seu Pix. O PAVLVS está liberado nesta conta.", "Ativa", "", true); }
       else if (c.status === "vencida" || c.status === "cancelada" || c.status === "recusada") { clearInterval(vigia); $("ck-erro-pix").textContent = "Este Pix venceu. Gere outro para pagar."; $("ck-pix-gerar").hidden = false; $("ck-pix-codigo").hidden = true; }
     }, 5000);
   }
 
-  function fim(titulo, texto, selo, tipo) {
+  function fim(titulo, texto, selo, tipo, pago) {
     var p = precoAtual();
     $("ck-fim-titulo").textContent = titulo;
     $("ck-fim-texto").textContent = texto;
     $("fm-plano").textContent = "PAVLVS · " + nomeDoPlano(p);
-    $("fm-ciclo").textContent = cicloTexto();
+    $("fm-ciclo").textContent = cicloTexto(pago);
     $("fm-selo").textContent = selo;
     $("fm-selo").className = "selo" + (tipo ? " " + tipo : "");
     $("fm-pago").textContent = brl(p.centavos);
@@ -563,6 +583,7 @@
         '<span class="nome"><strong>' + nomeDoPlano(p) + "</strong><small>" + pessoas(p) + '</small></span><span class="preco"></span></button>';
     }).join("");
     estado.perfil = (await pedir("/api/cobranca/v1/cliente")).perfil || null;
+    await lerPagoAte();
     desenhar();
   }
 
