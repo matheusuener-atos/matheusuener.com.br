@@ -64,7 +64,9 @@
         "AMBIENTE": "teste",
         "APP_URL": "https://atos.dev.br",
         "MP_PUBLIC_KEY": "APP_USR-8eddac59-2852-455f-8b12-04f7761ff00b",
-        "PRODUTOS_ABERTOS": "pavlvs"
+        "PRODUTOS_ABERTOS": "pavlvs",
+        // O comprador de teste da conta (MLB, id 3701347744): o pagador de todo pagamento daqui.
+        "MP_PAGADOR_TESTE": "test_user_4004064182913175927@testuser.com"
       }
     }
   }

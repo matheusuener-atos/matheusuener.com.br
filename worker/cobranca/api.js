@@ -242,7 +242,7 @@ async function assinar(request, env, s, cid, meu, op) {
   const r = await criarPreapproval(env, {
     reason: oferta.nome,
     external_reference: ref,
-    payer_email: perfil.email,
+    payer_email: pagadorDe(env, perfil),
     card_token_id: String(d.token),
     auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: oferta.centavos / 100, currency_id: MOEDA },
     back_url: backUrl,
@@ -282,7 +282,7 @@ async function pagar(request, env, s, cid, meu, op) {
     processing_mode: "automatic",
     total_amount: oferta.valor,
     external_reference: ref,
-    payer: { email: perfil.email, identification: { type: perfil.tipo === "pj" ? "CNPJ" : "CPF", number: perfil.documento } },
+    payer: { email: pagadorDe(env, perfil), identification: { type: perfil.tipo === "pj" ? "CNPJ" : "CPF", number: perfil.documento } },
     transactions: { payments: [pagamento] },
   }, { ...op, idempotencia: ref });
   if (!r.ok || !r.dados || !r.dados.id) {
