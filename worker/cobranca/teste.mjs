@@ -148,6 +148,16 @@ r = { r: await worker.fetch(new Request(A + "/api/cobranca/v1/assinar", { method
 checar(r.r.status === 409, "produto que ainda nao vende pela Atos: 409");
 
 console.log("a assinatura mensal no cartao");
+{
+  // O cartao que o Mercado Pago nao aceita para recorrencia: recusada, sem evento (o retrato do produto nao mudou).
+  const eventosDa = async () => (await (await CLIENTES.get(await idDoCliente("pv-dona")).fetch("https://cliente/", { method: "POST", body: JSON.stringify({ op: "eventos" }) })).json()).eventos;
+  const antes = (await eventosDa()).length;
+  mp.recusar = "Unsupported_credit_card_for_recurring_payment";
+  r = await chamar("/api/cobranca/v1/assinar", { metodo: "POST", corpo: { preco: "pavlvs.escritorio.mes", token: "tok".repeat(8) } });
+  mp.recusar = null;
+  checar(r.status === 402 && r.d.codigo === "recusada" && /cobrança mensal automática/.test(r.d.erro), "o cartao que nao aceita recorrencia: 402, dizendo isso", r.d);
+  checar((await eventosDa()).length === antes, "a tentativa recusada nao vira evento para o produto", (await eventosDa()).length - antes);
+}
 mp.pedidos.length = 0;
 r = await chamar("/api/cobranca/v1/assinar", { metodo: "POST", corpo: { preco: "pavlvs.escritorio.mes", token: "tok".repeat(8), valor: 1, transaction_amount: 1 } });
 const criou = mp.pedidos.find((x) => x.url === "https://api.mercadopago.com/preapproval");

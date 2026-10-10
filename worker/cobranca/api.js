@@ -89,7 +89,8 @@ export async function atenderCobrancaV1(request, env, url, deps = {}) {
     // So no Worker de teste: a fila de eventos desta conta (entregue, pendente ou falhou), para conferir.
     if (p === "/api/teste/eventos" && request.method === "GET") {
       if (!ehAmbienteDeTeste(env)) return erro(404, "rota não existe");
-      return json({ eventos: (await meu.pedir("eventos")).eventos });
+      // Com os registros como estao guardados (a resposta do Mercado Pago na recusa): o teste e para conferir.
+      return json({ eventos: (await meu.pedir("eventos")).eventos, registros: await meu.pedir("listar") });
     }
     if (p === "/api/cobranca/v1/cliente") {
       if (request.method === "GET") return json({ perfil: (await meu.pedir("perfil_ler")).perfil });
@@ -256,7 +257,12 @@ async function assinar(request, env, s, cid, meu, op) {
   }, op);
   if (!r.ok || !r.dados || !r.dados.id) {
     const motivo = (r.dados && (r.dados.message || r.dados.error)) || "recusado";
-    await meu.pedir("atualizar", { tipo: "assinatura", ref, campos: { status: "recusada", motivo: String(motivo).slice(0, 200) } });
+    // O porque do Mercado Pago, nos logs do Worker (o status e a resposta dele; nada do cartao vai nela).
+    console.warn("cobranca: o Mercado Pago recusou a assinatura", ref, r.status, JSON.stringify(r.dados || null).slice(0, 800));
+    await meu.pedir("atualizar", { tipo: "assinatura", ref, campos: { status: "recusada", motivo: String(motivo).slice(0, 200), resposta: JSON.stringify(r.dados || null).slice(0, 800) } });
+    if (/unsupported_credit_card_for_recurring/i.test(String(motivo))) {
+      return erro(402, "este cartão não aceita cobrança mensal automática (alguns pré-pagos e de débito não aceitam): use outro cartão de crédito, ou pague no Pix", "recusada");
+    }
     return erro(402, "o cartão não foi aceito para a assinatura: confira os dados ou use outro cartão", "recusada");
   }
   const atual = (await aplicarPreapproval(env, r.dados)) || { ref, status: r.dados.status };
@@ -293,7 +299,8 @@ async function pagar(request, env, s, cid, meu, op) {
   }, { ...op, idempotencia: ref });
   if (!r.ok || !r.dados || !r.dados.id) {
     const detalhe = r.dados && r.dados.errors && r.dados.errors[0] && r.dados.errors[0].code;
-    await meu.pedir("atualizar", { tipo: "compra", ref, campos: { status: "recusada", motivo: String(detalhe || r.status).slice(0, 120) } });
+    console.warn("cobranca: o Mercado Pago recusou a order", ref, r.status, JSON.stringify(r.dados || null).slice(0, 800));
+    await meu.pedir("atualizar", { tipo: "compra", ref, campos: { status: "recusada", motivo: String(detalhe || r.status).slice(0, 120), resposta: JSON.stringify(r.dados || null).slice(0, 800) } });
     return erro(402, forma === "pix" ? "não deu para gerar o Pix agora: tente de novo" : fraseDaRecusa(detalhe), "recusada");
   }
   const compra = (await aplicarOrder(env, r.dados)) || { ref, status: "processando" };

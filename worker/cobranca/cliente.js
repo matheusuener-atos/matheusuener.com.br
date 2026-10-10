@@ -105,9 +105,11 @@ export class ClienteCobranca {
         const antes = PREFIXOS[d.tipo] ? await s.get(chave) : null;
         if (!antes) return { ok: false, erro: "não existe" };
         const r = { ...antes, ...d.campos, atualizada: agora };
+        // A assinatura mudou o que o produto ve (autorizou, pausou, cancelou, a proxima cobranca): ele fica
+        // sabendo. A tentativa recusada nao muda o retrato, e nao vira evento.
+        const retratoAntes = d.tipo === "assinatura" ? JSON.stringify(await this.retrato(antes.produto)) : "";
         await s.put(chave, r);
-        // A assinatura mudou de estado (autorizou, pausou, cancelou): o produto fica sabendo.
-        if (d.tipo === "assinatura" && (antes.status !== r.status || antes.proxima !== r.proxima)) await this.publicarDireito(r.produto);
+        if (d.tipo === "assinatura" && JSON.stringify(await this.retrato(r.produto)) !== retratoAntes) await this.publicarDireito(r.produto);
         return { ok: true, registro: r, antes };
       }
       case "ler": {
