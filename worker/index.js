@@ -10,7 +10,6 @@ import { EMISSOR, dentroDoLimite, json } from "./comum.js";
 import { atenderConta, ehRotaDaConta } from "./contas.js";
 import { atenderOIDC, ehRotaDoOIDC } from "./oidc.js";
 import { atenderGoogle, ehRotaDoGoogle } from "./google.js";
-import { atenderCobranca, ehRotaDaCobranca } from "./cobranca.js";
 import { atenderCobrancaV1, ehRotaDaCobrancaV1 } from "./cobranca/api.js";
 import { ehAmbienteDeTeste } from "./cobranca/eventos.js";
 
@@ -116,10 +115,6 @@ export default {
       if (ehRotaDoOIDC(url)) {
         if (url.pathname.startsWith("/api/") && !mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
         return comCabecalhos(await atenderOIDC(request, env, url, { dentroDoLimite }));
-      }
-      if (ehRotaDaCobranca(url)) {
-        if (!mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);
-        return comCabecalhos(await atenderCobranca(request, env, url));
       }
       if (ehRotaDaConta(url)) {
         if (!mesmaOrigem(request, url)) return json({ erro: "origem não permitida" }, 403);

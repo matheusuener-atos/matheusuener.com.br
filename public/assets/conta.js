@@ -6,19 +6,14 @@
    GET /api/cobranca/v1/conta (o direito, a assinatura e as faturas de cada
    produto) e muda a assinatura por /api/subscriptions/<id>/(pause|reactivate|cancel).
    Os dados fiscais sao os da Atos (/api/cobranca/v1/cliente), os mesmos do checkout.
-
-   O legado: quem pagava o PAVLVS antes da Atos (o Mercado Pago do proprio
-   PAVLVS) ainda aparece pela ponte (/api/cobranca, worker/cobranca.js), com o
-   pagamento na Minha conta do PAVLVS, enquanto nao tiver nada na Atos.
    Sem sessao, vai para /entrar. */
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var PAVLVS_CONTA = "https://paulus.ia.br/minha-conta";
   var SECOES = ["resumo", "dados", "assinaturas", "faturamento", "carteira"];
   var S = {
     conta: null, apps: null, appsErro: "", editando: false, nomeErro: "",
-    atos: null, atosErro: "", cob: null, cobErro: "",
+    atos: null, atosErro: "",
     confirmar: "", mudando: "", acaoErro: "",
     dadosMsg: "", dadosErro: "", salvando: false, rascunho: null, ibge: "",
     filtro: filtroDaUrl(),
@@ -84,8 +79,6 @@
     return "";
   }
   function temAtos() { return Boolean(S.atos && (S.atos.produtos.length || S.atos.faturas.length)); }
-  /* O legado (o PAVLVS cobrava antes da Atos): so quando a Atos nao tem nada desta conta. */
-  function legado() { return !temAtos() && S.cob && S.cob.assinatura ? S.cob : null; }
   function assinarDe(produto, preco) { return "/" + produto + "/assinar/" + (preco ? "?preco=" + encodeURIComponent(preco) : ""); }
 
   /* A situacao de um produto na Atos: o selo, a linha de baixo e o que se pode fazer. */
@@ -160,10 +153,8 @@
       "</div>" + (S.nomeErro ? '<p class="erro" role="alert">' + esc(S.nomeErro) + "</p>" : "");
 
     h += h2("Assinaturas");
-    var lg = legado();
     if (esperandoAtos()) h += esperandoAtos();
     else if (temAtos() && S.atos.produtos.length) h += '<div class="card">' + S.atos.produtos.map(itemDoResumo).join("") + "</div>";
-    else if (lg) h += itemDoLegado(lg.assinatura);
     else h += vazio('Nenhuma assinatura. <a href="' + assinarDe("pavlvs") + '">Assinar o PAVLVS</a>');
 
     h += h2("Aplicativos com acesso");
@@ -220,8 +211,6 @@
   function assinaturas() {
     var h = titulo("Assinaturas", "Os planos que você assina com a Atos.");
     if (esperandoAtos()) return h + esperandoAtos();
-    var lg = legado();
-    if (!temAtos() && lg) return h + assinaturaDoLegado(lg);
     if (!S.atos.produtos.length) return h + vazio('Nenhuma assinatura. <a href="' + assinarDe("pavlvs") + '">Assinar o PAVLVS</a>');
     h += S.atos.produtos.map(cartaoDoProduto).join("");
     if (S.acaoErro) h += '<p class="erro" role="alert">' + esc(S.acaoErro) + "</p>";
@@ -235,16 +224,11 @@
   var pendente = function (x) { return x.status === "aguardando" || x.status === "processando"; };
   var anoDe = function (x) { return String(x.data || "").slice(0, 4); };
   function produtoDe(x) { return String(x.produto || (/^PAVLVS/i.test(x.descricao || "") ? "pavlvs" : "")); }
-  /* Todas as faturas (a Atos e, depois, as de antes da Atos), num formato so. */
+  /* As faturas da Atos, num formato so. */
   function todasAsFaturas() {
-    var l = (S.atos.faturas || []).map(function (x) {
-      return { id: x.id, data: x.data, descricao: x.descricao, valor: Number(x.centavos || 0) / 100, status: x.status, forma: x.forma, produto: produtoDe(x), atos: true };
+    return (S.atos.faturas || []).map(function (x) {
+      return { id: x.id, data: x.data, descricao: x.descricao, valor: Number(x.centavos || 0) / 100, status: x.status, forma: x.forma, produto: produtoDe(x) };
     });
-    ((S.cob && S.cob.faturas) || []).forEach(function (x) {
-      l.push({ id: x.nfse ? "NFS-e " + x.nfse : "", data: x.data, descricao: "PAVLVS · " + x.descricao, valor: Number(x.valor || 0), produto: "pavlvs",
-        status: x.situacao === "paga" ? "paga" : x.situacao === "pendente" ? "aguardando" : "devolvida", pdf: x.pdf, xml: x.xml, legado: true });
-    });
-    return l;
   }
   function filtrar(l, f, semStatus) {
     var q = f.q.trim().toLowerCase();
@@ -284,8 +268,8 @@
         '<div class="fatura cab"><span>Emissão e fatura</span><span>Situação</span><span class="valor">Valor</span><span></span></div>' +
         lista.map(function (x) {
           var st = ST_FATURA[x.status] || [x.status, ""];
-          var docs = (x.pdf ? '<a class="btn p" href="' + esc(x.pdf) + '"' + FORA + ">NFS-e</a>" : "") + (x.xml ? '<a class="btn p" href="' + esc(x.xml) + '"' + FORA + ">XML</a>" : "");
-          var sub = [data(x.data), x.id ? (x.legado ? x.id : "Fatura " + x.id) : "", x.atos ? (x.forma === "pix" ? "Pix" : "Cartão") : "antes da Atos"].filter(Boolean).join(" · ");
+          var docs = "";
+          var sub = [data(x.data), x.id ? "Fatura " + x.id : "", x.forma === "pix" ? "Pix" : "Cartão"].filter(Boolean).join(" · ");
           return '<div class="fatura"><span class="fatura-desc"><span>' + esc(x.descricao) + "</span><small>" + esc(sub) + "</small></span>" +
             '<span class="fatura-sit ' + st[1] + '">' + esc(st[0]) + '</span><span class="valor">' + reais(x.valor) + '</span><span class="docs">' + docs + "</span></div>";
         }).join("") + "</div></div>";
@@ -309,8 +293,6 @@
   function carteira() {
     var h = titulo("Carteira", "O cartão usado nas assinaturas.");
     if (esperandoAtos()) return h + h2("Cartão") + esperandoAtos();
-    var lg = legado();
-    if (!temAtos() && lg) return h + carteiraDoLegado(lg);
     var vivas = S.atos.produtos.filter(function (x) { var a = x.assinatura; return a && ["authorized", "paused", "pending"].indexOf(a.status) >= 0; });
     if (!vivas.length) return h + h2("Cartão") + vazio("Nenhuma assinatura no cartão. Os pagamentos de uma vez (o ano, o mês no Pix) não deixam cartão guardado.");
     h += h2("Cartão") + '<div class="card">' + vivas.map(function (x) {
@@ -319,32 +301,6 @@
     }).join("") + "</div>";
     return h + '<p class="nota">O cartão fica guardado no Mercado Pago, nunca na Atos. Trocar o cartão de uma assinatura ainda não é feito por aqui: ' +
       'escreva para <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>.</p>';
-  }
-
-  // ------------------------------------------------------------ o legado (o PAVLVS cobrava antes da Atos)
-
-  function planoDoLegado(a) { return "Plano " + (a.nome || "").replace(/^plano\s+/i, "") + (a.periodo === "anual" ? " anual" : ""); }
-  function valorDoLegado(a) { return reais(a.valor) + (a.periodo === "anual" ? "/ano" : "/mês"); }
-  function itemDoLegado(a) {
-    var linha = a.proxima && a.situacao === "ativa" ? "Próxima cobrança em " + data(a.proxima) + " · " + valorDoLegado(a) : a.proxima ? "Vale até " + data(a.proxima) : valorDoLegado(a);
-    return '<a class="item" href="/conta/assinaturas" data-ir="assinaturas">' + LOGO + '<span class="nome"><strong>PAVLVS · ' + esc(planoDoLegado(a)) + "</strong><small>" + linha + "</small></span>" +
-      selo(a.situacao) + '<span class="seta" aria-hidden="true">→</span></a>';
-  }
-  function assinaturaDoLegado(cob) {
-    var a = cob.assinatura;
-    return '<div class="card"><div class="assinatura-topo"><img class="logo" src="/assets/paulus-p.png" alt="" width="40" height="40"><span class="nome"><strong>PAVLVS</strong><small>' +
-      esc(planoDoLegado(a)) + " · " + valorDoLegado(a) + "</small></span>" + selo(a.situacao) + "</div>" +
-      '<div class="colunas"><div><span class="rotulo">Desde</span><span>' + (data(a.desde) || "—") + "</span></div>" +
-      '<div><span class="rotulo">' + (a.situacao === "ativa" ? "Próxima cobrança" : "Vale até") + "</span><span>" + (data(a.proxima) || "—") + "</span></div></div>" +
-      '<div class="botoes"><a class="btn p" href="' + PAVLVS_CONTA + '"' + FORA + '>Abrir no PAVLVS<span class="glifo" aria-hidden="true">↗</span></a></div></div>' +
-      '<p class="nota">Esta assinatura é de antes da Atos: o PAVLVS cobra e muda por lá.</p>';
-  }
-  function carteiraDoLegado(cob) {
-    var c = cob.cartao;
-    if (!c) return h2("Cartão") + vazio("Nenhum cartão em uso.");
-    return h2("Cartão") + '<div class="card cartao-salvo"><span class="bandeira">' + esc(bandeira(c.bandeira)[0]) + '</span><span class="nome"><strong>' +
-      esc(bandeira(c.bandeira)[1]) + " •••• " + esc(c.final) + '</strong><small>Usado no PAVLVS, antes da Atos</small></span><a class="btn p" href="' + PAVLVS_CONTA + '"' + FORA +
-      '>Trocar<span class="glifo" aria-hidden="true">↗</span></a></div>';
   }
 
   var DESENHO = { resumo: resumo, dados: dados, assinaturas: assinaturas, faturamento: faturamento, carteira: carteira };
@@ -385,13 +341,6 @@
       desenhar();
     });
   }
-  function carregarLegado() {
-    api("/api/cobranca").then(function (d) {
-      S.cob = d.erro || d.sem_conta ? null : d;
-      desenhar();
-    });
-  }
-
   /* Pausar, reativar e cancelar: o Mercado Pago muda, e a tela le de novo. */
   function mudar(id, acao) {
     S.mudando = id; S.acaoErro = ""; desenhar();
@@ -502,6 +451,5 @@
     desenhar();
     carregarApps();
     carregarAtos();
-    carregarLegado();
   });
 })();
