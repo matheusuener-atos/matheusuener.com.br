@@ -252,6 +252,8 @@ a.item:hover { border-color: var(--line-hover); color: var(--text); }
 .colunas > div + div { border-left: 1px solid var(--line); }
 .botoes { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
 .botoes .direita { margin-left: auto; }
+.confirmar { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 0; font-size: 13px; color: var(--muted); }
+.confirmar .botoes { padding: 8px 0 14px; }
 /* Faturamento */
 .tabela { overflow-x: auto; overflow-y: hidden; }
 .tabela > div { min-width: 720px; }

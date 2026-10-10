@@ -8,6 +8,7 @@
 //   perfil              {tipo: "pf"|"pj", documento, nome, email, endereco{...}, atualizado}
 //   assinatura:<ref>    uma assinatura (a mensalidade no cartao) - ref e o external_reference
 //   compra:<ref>        uma compra (o ano, o mes no Pix, a recarga)
+//   cobranca:<ref>      uma cobranca mensal da assinatura (o authorized_payment), para o Faturamento
 //   direito:<produto>   ate quando o produto esta pago, o plano, o periodo que pagou, os creditos e a `versao`
 //   evento:<seq>        a fila de saida para o produto (eventos.js), entregue pelo alarme deste objeto
 //
@@ -15,7 +16,7 @@
 
 import { entregar, REENTREGAS_S } from "./eventos.js";
 
-const PREFIXOS = { assinatura: "assinatura:", compra: "compra:" };
+const PREFIXOS = { assinatura: "assinatura:", compra: "compra:", cobranca: "cobranca:" };
 const VIVAS = ["authorized", "pending", "paused"];
 
 /* Um mes depois, no mesmo dia, ou no ultimo do mes se ele nao tiver o dia (31/01 -> 28/02), e um mes de
@@ -111,6 +112,14 @@ export class ClienteCobranca {
         await s.put(chave, r);
         if (d.tipo === "assinatura" && JSON.stringify(await this.retrato(r.produto)) !== retratoAntes) await this.publicarDireito(r.produto);
         return { ok: true, registro: r, antes };
+      }
+      case "cobranca_salvar": {
+        // A cobranca do mes, pelo id do Mercado Pago: o aviso pode chegar mais de uma vez, e a situacao muda.
+        const chave = PREFIXOS.cobranca + d.registro.ref;
+        const antes = (await s.get(chave)) || { criada: agora };
+        const r = { ...antes, ...d.registro, atualizada: agora };
+        await s.put(chave, r);
+        return { ok: true, registro: r };
       }
       case "ler": {
         const r = PREFIXOS[d.tipo] ? await s.get(PREFIXOS[d.tipo] + d.ref) : null;

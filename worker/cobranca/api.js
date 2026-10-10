@@ -21,7 +21,7 @@
 
 import { json, lerJson } from "../comum.js";
 import { sessaoDe } from "../contas.js";
-import { catalogoPublico, MOEDA, produtoAberto, resolveOffer, voltaPermitida } from "./catalogo.js";
+import { catalogoPublico, MOEDA, PRODUTOS, produtoAberto, resolveOffer, voltaPermitida } from "./catalogo.js";
 import { cliente, clienteDaRef, idDoCliente, novaRef } from "./cliente.js";
 import { ehAmbienteDeTeste, segredoDo } from "./eventos.js";
 import { criarPreapproval, ErroMP, fraseDaRecusa, mpFetch } from "./mp.js";
@@ -99,6 +99,8 @@ export async function atenderCobrancaV1(request, env, url, deps = {}) {
       if (perfil.erro) return erro(400, perfil.erro);
       return json({ perfil: (await meu.pedir("perfil_salvar", { perfil })).perfil });
     }
+
+    if (p === "/api/cobranca/v1/conta" && request.method === "GET") return json(await minhaConta(meu));
 
     if (p === "/api/cobranca/v1/minhas") {
       const l = await meu.pedir("listar");
@@ -246,7 +248,7 @@ async function assinar(request, env, s, cid, meu, op) {
   if (barrado) return barrado;
   const ref = novaRef(cid, "assinatura");
   await meu.pedir("registrar", { tipo: "assinatura", registro: { ref, produto: oferta.produto, preco: oferta.id, plano: oferta.metadados.plano,
-    centavos: oferta.centavos, forma: "cartao", status: "criando" } });
+    centavos: oferta.centavos, forma: "cartao", bandeira: /^[a-z_]{2,20}$/.test(String(d.paymentMethodId || "")) ? String(d.paymentMethodId) : "", status: "criando" } });
   const backUrl = (env.APP_URL || "https://atos.dev.br") + "/conta/assinaturas";
   const r = await criarPreapproval(env, {
     reason: oferta.nome,
@@ -360,6 +362,11 @@ export async function aplicarCobrancaRecorrente(env, ap, op) {
   const assinatura = await aplicarPreapproval(env, g.dados);
   if (!assinatura) return null;
   const aprovado = ap.payment && ap.payment.status === "approved";
+  const recusado = ap.payment && ["rejected", "cancelled", "canceled"].includes(ap.payment.status);
+  await cliente(env, clienteDaRef(assinatura.ref).clienteId).pedir("cobranca_salvar", { registro: {
+    ref: "ap-" + String(ap.id), assinatura: assinatura.ref, produto: assinatura.produto, preco: assinatura.preco, plano: assinatura.plano,
+    centavos: Math.round(Number(ap.transaction_amount) * 100) || assinatura.centavos, forma: "cartao",
+    status: aprovado ? "paga" : recusado ? "recusada" : "processando", quando: ap.debit_date || ap.date_created || new Date().toISOString() } });
   if (aprovado) {
     const dono = clienteDaRef(assinatura.ref);
     await cliente(env, dono.clienteId).pedir("estender", { produto: assinatura.produto, plano: assinatura.plano,
@@ -428,7 +435,37 @@ export async function aplicarAviso(env, tipo, id, op) {
 // ------------------------------------------------------------------ o que a tela ve
 
 function publicaAssinatura(a) {
-  return { id: a.ref, produto: a.produto, preco: a.preco, plano: a.plano, centavos: a.centavos, status: a.status, proxima: a.proxima || null, criada: a.criada };
+  return { id: a.ref, produto: a.produto, preco: a.preco, plano: a.plano, centavos: a.centavos, status: a.status, proxima: a.proxima || null, criada: a.criada,
+    bandeira: a.bandeira || "" };
+}
+
+/* A Minha conta da Atos (public/assets/conta.js): por produto, o direito, a assinatura que importa e o nome do
+   plano; e as faturas (as compras e as cobrancas do mes), da mais nova para a mais velha. */
+async function minhaConta(meu) {
+  const l = await meu.pedir("listar");
+  const direitos = (await meu.pedir("direitos")).direitos;
+  const perfil = (await meu.pedir("perfil_ler")).perfil;
+  const nomeDoPreco = (id) => (resolveOffer(id) || {}).nome || id;
+  const produtos = [];
+  for (const [produto, p] of Object.entries(PRODUTOS)) {
+    const dir = direitos.find((x) => x.produto === produto) || null;
+    const minhas = l.assinatura.filter((a) => a.produto === produto && !["criando", "recusada"].includes(a.status))
+      .sort((a, b) => String(b.criada).localeCompare(String(a.criada)));
+    const a = minhas.find((x) => VIVAS.includes(x.status)) || minhas[0] || null;
+    if (!dir && !a) continue;
+    const plano = (dir && dir.plano) || (a && a.plano) || null;
+    produtos.push({
+      produto, nome: p.nome, plano, plano_nome: plano ? nomeDoPreco(`${produto}.${plano}.mes`).replace(p.nome + " ", "") : null,
+      direito: dir ? { ate: dir.ate || null, periodo: dir.periodo || null, pago_por: dir.pago_por || null } : null,
+      assinatura: a ? { ...publicaAssinatura(a), nome: nomeDoPreco(a.preco) } : null,
+    });
+  }
+  const faturas = [
+    ...l.compra.filter((c) => ["paga", "aguardando", "processando", "devolvida"].includes(c.status))
+      .map((c) => ({ id: c.ref, data: c.paga_em || c.criada, descricao: nomeDoPreco(c.preco), centavos: c.centavos, status: c.status, forma: c.forma })),
+    ...l.cobranca.map((c) => ({ id: c.ref, data: c.quando || c.criada, descricao: nomeDoPreco(c.preco) + " · mensalidade", centavos: c.centavos, status: c.status, forma: "cartao" })),
+  ].sort((x, y) => String(y.data).localeCompare(String(x.data)));
+  return { perfil, produtos, faturas };
 }
 
 function publicaCompra(c) {

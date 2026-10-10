@@ -218,6 +218,19 @@ checar(rr.status === 200 && dir && dir.plano === "escritorio" && umMes > 27 && u
 await aviso("subscription_authorized_payment", "ap-1");
 dir = (await chamar("/api/cobranca/v1/minhas")).d.direitos.find((x) => x.produto === "pavlvs");
 checar(Math.abs((Date.parse(dir.ate) - Date.now()) / 86400000 - umMes) < 0.01, "o mesmo aviso de novo: estende uma vez so");
+{
+  // A Minha conta: o produto com o nome do plano e a assinatura, e a mensalidade uma vez so no Faturamento.
+  const c = (await chamar("/api/cobranca/v1/conta")).d;
+  const pv = c.produtos.find((x) => x.produto === "pavlvs");
+  checar(pv && pv.nome === "PAVLVS" && pv.plano_nome === "Escritório" && pv.assinatura && pv.assinatura.status === "authorized" && pv.direito.ate === dir.ate && pv.direito.pago_por === "assinatura",
+    "GET /api/cobranca/v1/conta: o PAVLVS, o plano pelo nome, a assinatura e ate quando esta pago", pv);
+  const mensalidades = c.faturas.filter((f) => f.id === "ap-ap-1");
+  checar(mensalidades.length === 1 && mensalidades[0].status === "paga" && mensalidades[0].centavos === 129000 && /Escritório · mensalidade/.test(mensalidades[0].descricao),
+    "a mensalidade aparece uma vez no Faturamento (o aviso veio duas), paga, com o valor do plano", c.faturas);
+  checar(c.perfil && c.perfil.documento === "52998224725", "os dados fiscais vem junto", c.perfil);
+  r = await chamar("/api/cobranca/v1/conta", { semCookie: true });
+  checar(r.status === 401, "sem sessao, a Minha conta nao abre: 401", r.status);
+}
 
 console.log("a recarga e o ano no Pix");
 r = await chamar("/api/cobranca/v1/pagar", { metodo: "POST", corpo: { preco: "pavlvs.escritorio.recarga", forma: "pix" } });
