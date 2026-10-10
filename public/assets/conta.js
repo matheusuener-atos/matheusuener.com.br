@@ -21,7 +21,13 @@
     atos: null, atosErro: "", cob: null, cobErro: "",
     confirmar: "", mudando: "", acaoErro: "",
     dadosMsg: "", dadosErro: "", salvando: false, rascunho: null, ibge: "",
+    filtro: filtroDaUrl(),
   };
+  function filtroDaUrl() {
+    var q = new URLSearchParams(location.search);
+    var st = q.get("status");
+    return { status: st === "paga" || st === "pendente" ? st : "", ano: q.get("ano") || "", produto: q.get("produto") || "", q: q.get("q") || "" };
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
@@ -48,7 +54,16 @@
     var m = /^\/conta\/([a-z]+)/.exec(location.pathname);
     return m && SECOES.indexOf(m[1]) > 0 ? m[1] : "resumo";
   }
-  function titulo(t, descricao) { return "<h1>" + t + "</h1>" + (descricao ? '<p class="descricao">' + descricao + "</p>" : ""); }
+  var GUIAS = [["resumo", "Resumo", "/conta/"], ["dados", "Dados", "/conta/dados"], null, ["assinaturas", "Assinaturas", "/conta/assinaturas"],
+    ["faturamento", "Faturamento", "/conta/faturamento"], ["carteira", "Carteira", "/conta/carteira"]];
+  function guias() {
+    var sec = secaoAtual();
+    return '<nav class="guias" aria-label="Minha conta">' + GUIAS.map(function (g) {
+      if (!g) return '<span class="sep" aria-hidden="true"></span>';
+      return '<a href="' + g[2] + '" data-secao="' + g[0] + '"' + (g[0] === sec ? ' aria-current="page"' : "") + ">" + g[1] + "</a>";
+    }).join("") + '<button type="button" class="fim" data-acao="sair">Sair</button></nav>';
+  }
+  function titulo(t, descricao) { return "<h1>" + t + "</h1>" + (descricao ? '<p class="descricao">' + descricao + "</p>" : "") + guias(); }
   function h2(t) { return '<h2 class="titulo-secao">' + t + "</h2>"; }
   function vazio(t) { return '<div class="card"><p class="vazio">' + t + "</p></div>"; }
 
@@ -135,7 +150,10 @@
     var nome = S.editando
       ? '<form data-form="nome"><input name="nome" maxlength="80" autocomplete="name" value="' + esc(c.nome) + '" aria-label="Nome"><button type="submit" class="btn p primario">Salvar</button><button type="button" class="btn p" data-acao="cancelar-nome">Cancelar</button></form>'
       : "<span>" + (c.nome ? esc(c.nome) : '<span class="apagado">Sem nome</span>') + "</span>";
-    var h = titulo("Resumo") + h2("Conta Atos") + '<div class="card">' +
+    var h = titulo("Resumo") +
+      '<figure class="quadro faixa-quadro" aria-label="A Última Ceia, Leonardo da Vinci"><div class="faixa-img"></div>' +
+      "<figcaption><span>A Última Ceia</span><small>Leonardo da Vinci, 1498 · Atos 2:42</small></figcaption></figure>" +
+      h2("Conta Atos") + '<div class="card">' +
       '<div class="dado"><span class="rotulo">Nome</span>' + nome + (S.editando ? "<span></span>" : '<button type="button" class="btn p" data-acao="editar-nome">Editar</button>') + "</div>" +
       '<div class="dado"><span class="rotulo">E-mail</span><span>' + esc(c.email) + "</span><span></span></div>" +
       '<div class="dado"><span class="rotulo">Senha</span><span class="apagado">••••••••••</span><a class="btn p" href="/entrar/?modo=esqueci">Trocar a senha</a></div>' +
@@ -207,30 +225,85 @@
     if (!S.atos.produtos.length) return h + vazio('Nenhuma assinatura. <a href="' + assinarDe("pavlvs") + '">Assinar o PAVLVS</a>');
     h += S.atos.produtos.map(cartaoDoProduto).join("");
     if (S.acaoErro) h += '<p class="erro" role="alert">' + esc(S.acaoErro) + "</p>";
-    return h + '<p class="nota">Pausar para as cobranças até você reativar; o que já foi pago continua valendo até o fim. ' +
+    var viva = S.atos.produtos.some(function (x) { return x.assinatura && (x.assinatura.status === "authorized" || x.assinatura.status === "paused"); });
+    return h + '<p class="nota">' + (viva ? "Pausar para as cobranças até você reativar; o que já foi pago continua valendo até o fim. " : "") +
       "Para mudar de plano: cancele, e assine o outro quando o período pago acabar (antes disso, seria cobrar duas vezes). " +
       'Dúvidas: <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>.</p>';
   }
 
-  var ST_FATURA = { paga: ["Paga", ""], aguardando: ["Aguardando o Pix", "outro"], processando: ["Processando", "outro"], devolvida: ["Devolvida", "outro"], recusada: ["Recusada", "outro"] };
+  var ST_FATURA = { paga: ["Paga", ""], aguardando: ["Aguardando o Pix", "pendente"], processando: ["Processando", "pendente"], devolvida: ["Devolvida", ""], recusada: ["Recusada", ""] };
+  var pendente = function (x) { return x.status === "aguardando" || x.status === "processando"; };
+  var anoDe = function (x) { return String(x.data || "").slice(0, 4); };
+  function produtoDe(x) { return String(x.produto || (/^PAVLVS/i.test(x.descricao || "") ? "pavlvs" : "")); }
+  /* Todas as faturas (a Atos e, depois, as de antes da Atos), num formato so. */
+  function todasAsFaturas() {
+    var l = (S.atos.faturas || []).map(function (x) {
+      return { id: x.id, data: x.data, descricao: x.descricao, valor: Number(x.centavos || 0) / 100, status: x.status, forma: x.forma, produto: produtoDe(x), atos: true };
+    });
+    ((S.cob && S.cob.faturas) || []).forEach(function (x) {
+      l.push({ id: x.nfse ? "NFS-e " + x.nfse : "", data: x.data, descricao: "PAVLVS · " + x.descricao, valor: Number(x.valor || 0), produto: "pavlvs",
+        status: x.situacao === "paga" ? "paga" : x.situacao === "pendente" ? "aguardando" : "devolvida", pdf: x.pdf, xml: x.xml, legado: true });
+    });
+    return l;
+  }
+  function filtrar(l, f, semStatus) {
+    var q = f.q.trim().toLowerCase();
+    return l.filter(function (x) {
+      if (!semStatus && f.status === "paga" && x.status !== "paga") return false;
+      if (!semStatus && f.status === "pendente" && !pendente(x)) return false;
+      if (f.ano && anoDe(x) !== f.ano) return false;
+      if (f.produto && x.produto !== f.produto) return false;
+      if (q && (String(x.id || "") + " " + (x.descricao || "")).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+  function opcao(valor, rotulo, atual) { return '<option value="' + esc(valor) + '"' + (valor === atual ? " selected" : "") + ">" + esc(rotulo) + "</option>"; }
   function faturamento() {
     var h = titulo("Faturamento", "Os pagamentos do que você assina com a Atos.");
-    if (esperandoAtos()) return h + h2("Faturas") + esperandoAtos();
-    var f = S.atos.faturas;
-    var lg = S.cob && (S.cob.faturas || []).length ? S.cob.faturas : null;
-    if (!f.length && !lg) return h + h2("Faturas") + vazio("Nenhum pagamento até agora.");
-    if (f.length) {
-      h += h2("Faturas") + '<div class="card tabela"><div>' +
-        '<div class="tr th"><span>Data</span><span>Descrição</span><span>Valor</span><span>Status</span><span>Forma</span></div>' +
-        f.map(function (x) {
-          var st = ST_FATURA[x.status] || [x.status, "outro"];
-          return '<div class="tr"><span class="data">' + data(x.data) + '</span><span class="desc"><span>' + esc(x.descricao) + "</span></span>" +
-            "<span>" + centavos(x.centavos) + '</span><span class="status ' + st[1] + '">' + esc(st[0]) + '</span><span class="docs"><span class="sem">' + (x.forma === "pix" ? "Pix" : "Cartão") + "</span></span></div>";
-        }).join("") + "</div></div>" +
-        '<p class="nota">A nota fiscal (NFS-e) dos pagamentos feitos na Atos ainda não sai sozinha. Se precisar dela, escreva para <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>.</p>';
+    if (esperandoAtos()) return h + esperandoAtos();
+    var todas = todasAsFaturas();
+    if (!todas.length) return h + '<div class="card filtros-vazio"><p class="vazio">Nenhum pagamento até agora.</p></div>';
+    var f = S.filtro;
+    var base = filtrar(todas, f, true);
+    var cont = { "": base.length, paga: base.filter(function (x) { return x.status === "paga"; }).length, pendente: base.filter(pendente).length };
+    var anos = todas.map(anoDe).filter(function (a, i, l) { return a && l.indexOf(a) === i; }).sort().reverse();
+    var lista = filtrar(todas, f, false);
+    h += '<div class="card filtros">' +
+      '<div class="opcoes" role="group" aria-label="Situação">' + [["", "Todas"], ["paga", "Pagas"], ["pendente", "Pendentes"]].map(function (o) {
+        return '<button type="button" data-filtro-status="' + o[0] + '" aria-pressed="' + (f.status === o[0]) + '">' + o[1] + ' <span class="conta-n">' + cont[o[0]] + "</span></button>";
+      }).join("") + "</div>" +
+      '<div class="filtros-campos">' +
+      '<select class="seletor" data-filtro="ano" aria-label="Ano">' + opcao("", "Todos os anos", f.ano) + anos.map(function (a) { return opcao(a, a, f.ano); }).join("") + "</select>" +
+      '<select class="seletor" data-filtro="produto" aria-label="Produto">' + opcao("", "Todos os produtos", f.produto) + opcao("pavlvs", "PAVLVS", f.produto) + "</select>" +
+      '<input class="seletor busca" type="search" data-filtro="q" aria-label="Buscar" placeholder="Buscar" value="' + esc(f.q) + '">' +
+      "</div></div>";
+    if (!lista.length) {
+      h += '<div class="card faturas-vazio"><span>Nenhuma fatura com esses filtros.</span><button type="button" class="btn p" data-acao="limpar-filtros">Limpar filtros</button></div>';
+    } else {
+      h += '<div class="card faturas"><div>' +
+        '<div class="fatura cab"><span>Emissão e fatura</span><span>Situação</span><span class="valor">Valor</span><span></span></div>' +
+        lista.map(function (x) {
+          var st = ST_FATURA[x.status] || [x.status, ""];
+          var docs = (x.pdf ? '<a class="btn p" href="' + esc(x.pdf) + '"' + FORA + ">NFS-e</a>" : "") + (x.xml ? '<a class="btn p" href="' + esc(x.xml) + '"' + FORA + ">XML</a>" : "");
+          var sub = [data(x.data), x.id ? (x.legado ? x.id : "Fatura " + x.id) : "", x.atos ? (x.forma === "pix" ? "Pix" : "Cartão") : "antes da Atos"].filter(Boolean).join(" · ");
+          return '<div class="fatura"><span class="fatura-desc"><span>' + esc(x.descricao) + "</span><small>" + esc(sub) + "</small></span>" +
+            '<span class="fatura-sit ' + st[1] + '">' + esc(st[0]) + '</span><span class="valor">' + reais(x.valor) + '</span><span class="docs">' + docs + "</span></div>";
+        }).join("") + "</div></div>";
     }
-    if (lg) h += h2("Antes da Atos, pagas ao PAVLVS") + faturasDoLegado(lg);
-    return h;
+    var total = lista.reduce(function (t, x) { return t + (x.status === "paga" ? x.valor : 0); }, 0);
+    var pend = lista.filter(pendente).length;
+    h += '<div class="card faturas-resumo"><span>' + lista.length + (lista.length === 1 ? " fatura" : " faturas") + ' · <strong>' + reais(total) + "</strong> pagos" +
+      (pend ? ' · <span class="aviso">' + pend + (pend === 1 ? " pendente" : " pendentes") + "</span>" : "") + "</span></div>";
+    return h + '<p class="nota">A nota fiscal (NFS-e) dos pagamentos feitos na Atos ainda não sai sozinha. Se precisar dela, escreva para <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>.</p>';
+  }
+  function aplicarFiltro() {
+    var f = S.filtro, q = new URLSearchParams();
+    if (f.ano) q.set("ano", f.ano);
+    if (f.status) q.set("status", f.status);
+    if (f.produto) q.set("produto", f.produto);
+    if (f.q) q.set("q", f.q);
+    history.replaceState(null, "", "/conta/faturamento" + (q.toString() ? "?" + q : ""));
+    desenhar();
   }
 
   function carteira() {
@@ -266,17 +339,6 @@
       '<div class="botoes"><a class="btn p" href="' + PAVLVS_CONTA + '"' + FORA + '>Abrir no PAVLVS<span class="glifo" aria-hidden="true">↗</span></a></div></div>' +
       '<p class="nota">Esta assinatura é de antes da Atos: o PAVLVS cobra e muda por lá.</p>';
   }
-  function faturasDoLegado(f) {
-    var ST = { paga: ["Paga", ""], pendente: ["Pendente", "outro"], estornada: ["Estornada", "outro"] };
-    return '<div class="card tabela"><div><div class="tr th"><span>Data</span><span>Descrição</span><span>Valor</span><span>Status</span><span>Documentos</span></div>' +
-      f.map(function (x) {
-        var st = ST[x.situacao] || [x.situacao, "outro"];
-        var docs = (x.pdf ? '<a class="btn mini" href="' + esc(x.pdf) + '"' + FORA + ">NFS-e</a>" : "") + (x.xml ? '<a class="btn mini" href="' + esc(x.xml) + '"' + FORA + ">XML</a>" : "");
-        return '<div class="tr"><span class="data">' + data(x.data) + '</span><span class="desc"><span>PAVLVS · ' + esc(x.descricao) + "</span>" +
-          (x.nfse ? "<small>NFS-e " + esc(x.nfse) + "</small>" : "") + "</span><span>" + reais(x.valor) + '</span><span class="status ' + st[1] + '">' + esc(st[0]) +
-          '</span><span class="docs">' + (docs || '<span class="sem">—</span>') + "</span></div>";
-      }).join("") + "</div></div>";
-  }
   function carteiraDoLegado(cob) {
     var c = cob.cartao;
     if (!c) return h2("Cartão") + vazio("Nenhum cartão em uso.");
@@ -289,22 +351,22 @@
 
   function desenhar() {
     var sec = secaoAtual();
-    document.querySelectorAll(".menu nav a").forEach(function (a) {
-      if (a.getAttribute("data-secao") === sec) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
-    });
-    $("m-nome").textContent = S.conta.nome || "Sua conta";
-    $("m-email").textContent = S.conta.email;
-    $("m-email").title = S.conta.email;
-    var foco = document.activeElement && document.activeElement.name;
+    var ativo = document.activeElement;
+    var foco = ativo && (ativo.name || (ativo.getAttribute && ativo.getAttribute("data-filtro")));
+    var pos = ativo && ativo.selectionStart;
     $("secao").innerHTML = DESENHO[sec]();
     if (S.editando) { var i = $("secao").querySelector("input[name=nome]"); if (i) i.focus(); }
-    else if (foco) { var j = $("secao").querySelector('input[name="' + foco + '"]'); if (j) j.focus(); }
+    else if (foco) {
+      var j = $("secao").querySelector('input[name="' + foco + '"], [data-filtro="' + foco + '"]');
+      if (j) { j.focus(); if (pos != null && j.setSelectionRange) try { j.setSelectionRange(pos, pos); } catch (x) { /* select */ } }
+    }
   }
 
   function ir(sec) {
     var url = sec === "resumo" ? "/conta/" : "/conta/" + sec;
     if (location.pathname !== url) history.pushState(null, "", url);
     S.dadosMsg = ""; S.dadosErro = ""; S.rascunho = null; S.confirmar = ""; S.acaoErro = "";
+    S.filtro = { status: "", ano: "", produto: "", q: "" };
     $("modal-excluir").hidden = true;
     desenhar();
     window.scrollTo(0, 0);
@@ -366,6 +428,8 @@
       ir(link.getAttribute("data-secao") || link.getAttribute("data-ir"));
       return;
     }
+    var fs = e.target.closest("[data-filtro-status]");
+    if (fs) { S.filtro.status = fs.getAttribute("data-filtro-status"); aplicarFiltro(); return; }
     var t = e.target.closest("[data-acao], [data-app], [data-fechar]");
     if (!t) return;
     if (t.hasAttribute("data-fechar")) { $("modal-excluir").hidden = true; return; }
@@ -387,6 +451,14 @@
     else if (a === "cancelar") { S.confirmar = id; S.acaoErro = ""; desenhar(); }
     else if (a === "cancelar-nao") { S.confirmar = ""; desenhar(); }
     else if (a === "cancelar-sim") mudar(id, "cancel");
+    else if (a === "limpar-filtros") { S.filtro = { status: "", ano: "", produto: "", q: "" }; aplicarFiltro(); }
+    else if (a === "sair") api("/api/sair", {}).then(function () { location.replace("/entrar/"); });
+  });
+  document.addEventListener("input", function (e) {
+    var k = e.target && e.target.getAttribute && e.target.getAttribute("data-filtro");
+    if (!k) return;
+    S.filtro[k] = e.target.value;
+    aplicarFiltro();
   });
   document.addEventListener("focusout", function (e) {
     if (e.target && e.target.hasAttribute && e.target.hasAttribute("data-cep")) buscarCep(e.target);
@@ -421,10 +493,7 @@
     });
   });
 
-  $("m-sair").addEventListener("click", function () {
-    api("/api/sair", {}).then(function () { location.replace("/entrar/"); });
-  });
-  window.addEventListener("popstate", desenhar);
+  window.addEventListener("popstate", function () { S.filtro = filtroDaUrl(); desenhar(); });
 
   api("/api/eu").then(function (d) {
     if (!d.conta) { location.replace("/entrar/?volta=" + encodeURIComponent(location.pathname)); return; }

@@ -11,12 +11,14 @@
 <script src="/assets/tema.js"></script>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <!--
-  O checkout do PAVLVS na Atos Cobranca (docs/COBRANCA.md). A pessoa entra com a Conta Atos, escolhe
-  o plano, o periodo e a forma, e paga aqui: o cartao vai so aos campos seguros do Mercado Pago
-  (MercadoPago.js CardForm), e o servidor recebe o token de uso unico e o id do preco - o valor e o
-  do catalogo. Mensal no cartao: assinatura (a cobranca mensal e do Mercado Pago). Anual: cartao ou
-  Pix. Mensal no Pix: um mes avulso. O e-mail e o CPF/CNPJ vem da conta e dos dados fiscais, nao
-  daqui. O script desta pagina roda pelo hash dele (worker/index.js, CSP_CHECKOUT).
+  O checkout do PAVLVS na Atos Cobranca (docs/COBRANCA.md), no desenho v6: tres etapas (Plano, Dados
+  para a nota, Pagamento) e o Resumo ao lado. A pessoa entra com a Conta Atos, escolhe o plano, o
+  periodo e a forma, e paga aqui: o cartao vai so aos campos seguros do Mercado Pago (MercadoPago.js
+  CardForm), e o servidor recebe o token de uso unico e o id do preco - o valor e o do catalogo. O
+  cartao desenhado e so enfeite: ele mostra o que a pagina sabe sem tocar no cartao (a bandeira, os
+  primeiros digitos que o Mercado Pago devolve, o nome) e vira no codigo de seguranca. Mensal no
+  cartao: assinatura. Anual: cartao ou Pix. Mensal no Pix: um mes avulso. O script desta pagina roda
+  pelo hash dele (worker/index.js, CSP_CHECKOUT).
 -->
 </head>
 <body>
@@ -29,140 +31,194 @@
 </header>
 
 <main class="checkout" data-mp-subscriptions-page="without-plan-authorized">
-  <div class="checkout-coluna">
-    <h1>Assinar o PAVLVS</h1>
-    <p class="descricao" id="ck-quem">Carregando…</p>
+  <h1>Assinar o PAVLVS</h1>
+  <p class="descricao" id="ck-quem">Carregando…</p>
 
-    <div id="checkout-init-error" class="checkout-aviso erro" role="alert" aria-live="assertive" hidden></div>
-    <p class="checkout-aviso" id="ck-fechado" hidden>O PAVLVS ainda não vende pela Atos. Assim que abrir, é por aqui.</p>
+  <div id="checkout-init-error" class="checkout-aviso erro" role="alert" aria-live="assertive" hidden></div>
 
-    <section class="checkout-bloco" aria-labelledby="ck-plano-titulo">
-      <h2 class="titulo-secao" id="ck-plano-titulo">Plano</h2>
-      <div class="alternar" id="ck-planos" role="group" aria-label="Plano"></div>
-      <div class="checkout-escolhas">
-        <div class="alternar" id="ck-periodos" role="group" aria-label="Período">
-          <button type="button" data-periodo="mes" aria-pressed="true">Mensal</button>
-          <button type="button" data-periodo="ano" aria-pressed="false">Anual</button>
-        </div>
-        <div class="alternar" id="ck-formas" role="group" aria-label="Forma de pagamento">
-          <button type="button" data-forma="cartao" aria-pressed="true">Cartão</button>
-          <button type="button" data-forma="pix" aria-pressed="false">Pix</button>
-        </div>
-      </div>
-      <p class="checkout-total" id="ck-total" aria-live="polite">Total: <strong>—</strong></p>
-      <p class="nota" id="ck-explica"></p>
-    </section>
+  <nav class="etapas" id="ck-etapas" aria-label="Etapas">
+    <button type="button" data-etapa="plano"><span class="n">I</span>Plano<span class="feito" aria-label="feito">✓</span></button>
+    <button type="button" data-etapa="dados"><span class="n">II</span>Dados para a nota<span class="feito" aria-label="feito">✓</span></button>
+    <button type="button" data-etapa="pagar"><span class="n">III</span>Pagamento</button>
+  </nav>
 
-    <!-- Os dados para a nota fiscal: uma vez so, valem para todo produto da Atos. -->
-    <form class="form" id="form-perfil" novalidate hidden>
-      <h2 class="titulo-secao">Dados para a nota fiscal</h2>
-      <div class="campo">
-        <label class="rotulo" for="pf-documento">CPF ou CNPJ</label>
-        <input id="pf-documento" inputmode="numeric" autocomplete="off" maxlength="18" required>
-      </div>
-      <div class="campo">
-        <label class="rotulo" for="pf-nome" id="pf-nome-rotulo">Nome completo ou razão social</label>
-        <input id="pf-nome" autocomplete="name" maxlength="120" required>
-      </div>
-      <div class="dois">
-        <div class="campo">
-          <label class="rotulo" for="pf-cep">CEP</label>
-          <input id="pf-cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" required>
-        </div>
-        <div class="campo">
-          <label class="rotulo" for="pf-numero">Número</label>
-          <input id="pf-numero" autocomplete="off" maxlength="20" required>
-        </div>
-      </div>
-      <div class="campo">
-        <label class="rotulo" for="pf-logradouro">Rua</label>
-        <input id="pf-logradouro" autocomplete="address-line1" maxlength="120" required>
-      </div>
-      <div class="campo">
-        <label class="rotulo" for="pf-complemento">Complemento (opcional)</label>
-        <input id="pf-complemento" autocomplete="address-line2" maxlength="60">
-      </div>
-      <div class="dois">
-        <div class="campo">
-          <label class="rotulo" for="pf-bairro">Bairro</label>
-          <input id="pf-bairro" maxlength="60">
-        </div>
-        <div class="campo">
-          <label class="rotulo" for="pf-cidade">Cidade e UF</label>
-          <div class="checkout-cidade"><input id="pf-cidade" autocomplete="address-level2" maxlength="60" required><input id="pf-uf" autocomplete="address-level1" maxlength="2" required aria-label="UF"></div>
-        </div>
-      </div>
-      <p class="erro" id="pf-erro" role="alert"></p>
-      <button type="submit" class="btn primario largo" id="pf-salvar">Salvar e continuar</button>
-    </form>
+  <div class="checkout-grade" id="ck-grade">
+    <div class="checkout-etapas">
 
-    <!-- O cartao: os tres campos seguros sao iframes do Mercado Pago (nada do cartao passa por nos). -->
-    <form id="form-checkout" class="form" novalidate hidden
-          data-mp-public-key-source="runtime-endpoint"
-          data-mp-payer-email-source="application"
-          data-mp-payer-identification-source="application">
-      <h2 class="titulo-secao">Cartão de crédito</h2>
-      <div class="checkout-field campo" data-mp-field="cardNumber" role="group" aria-labelledby="card-number-label">
-        <span id="card-number-label" class="rotulo">Número do cartão</span>
-        <div id="form-checkout__cardNumber" data-mp-secure-field="cardNumber" class="secure-input" aria-labelledby="card-number-label"></div>
-      </div>
-      <div class="dois">
-        <div class="checkout-field campo" data-mp-field="expirationDate" role="group" aria-labelledby="expiration-label">
-          <span id="expiration-label" class="rotulo">Validade do cartão (MM/AA)</span>
-          <div id="form-checkout__expirationDate" data-mp-secure-field="expirationDate" class="secure-input" aria-labelledby="expiration-label"></div>
+      <!-- I · Plano -->
+      <section id="ck-etapa-plano" aria-labelledby="ck-plano-titulo">
+        <div class="linha-titulo">
+          <h2 class="titulo-secao" id="ck-plano-titulo">Plano</h2>
+          <div class="opcoes" id="ck-periodos" role="group" aria-label="Período">
+            <button type="button" data-periodo="mes" aria-pressed="true">Mensal</button>
+            <button type="button" data-periodo="ano" aria-pressed="false">Anual <span class="verde" id="ck-desconto-tag"></span></button>
+          </div>
         </div>
-        <div class="checkout-field campo" data-mp-field="securityCode" role="group" aria-labelledby="security-code-label">
-          <span id="security-code-label" class="rotulo">Código de segurança (CVC)</span>
-          <div id="form-checkout__securityCode" data-mp-secure-field="securityCode" class="secure-input" aria-labelledby="security-code-label"></div>
+        <p class="checkout-aviso" id="ck-fechado" hidden>O PAVLVS ainda não vende pela Atos. Assim que abrir, é por aqui.</p>
+        <div class="card planos" id="ck-planos" role="radiogroup" aria-label="Plano"></div>
+        <div class="checkout-botoes fim">
+          <button type="button" class="btn primario" id="ck-continuar">Continuar<span aria-hidden="true">→</span></button>
         </div>
-      </div>
-      <div class="checkout-field campo" data-mp-field="cardholderName">
-        <label class="rotulo" for="form-checkout__cardholderName">Nome no cartão</label>
-        <input type="text" id="form-checkout__cardholderName" autocomplete="cc-name" required>
-      </div>
-      <!-- Exigidos pelo CardForm do MercadoPago.js mesmo sem aparecer: ficam no DOM, escondidos. A parcela
-           e uma so (o servidor manda installments: 1); o tipo do documento vem dos dados fiscais. -->
-      <select id="form-checkout__issuer" data-mp-sdk-required-field="issuer" hidden aria-hidden="true" tabindex="-1"></select>
-      <select id="form-checkout__installments" data-mp-sdk-required-field="installments" hidden aria-hidden="true" tabindex="-1"></select>
-      <select id="form-checkout__identificationType" data-mp-sdk-required-field="identificationType" hidden aria-hidden="true" tabindex="-1"></select>
-      <p class="erro" id="ck-erro-cartao" role="alert"></p>
-      <button type="submit" class="btn primario largo" id="form-checkout__submit" data-mp-subscription-cta="without-plan-authorized">Assinar</button>
-      <p class="nota" id="ck-nota-assinatura">Na assinatura mensal, o Mercado Pago cobra o cartão todo mês. Você cancela quando quiser em Minha conta › Assinaturas.</p>
-    </form>
+      </section>
 
-    <!-- O Pix: o QR, o copia e cola e a situacao, que a tela consulta ate mudar. -->
-    <section class="form" id="ck-pix" hidden aria-labelledby="ck-pix-titulo">
-      <h2 class="titulo-secao" id="ck-pix-titulo">Pix</h2>
-      <div id="ck-pix-gerar">
-        <p class="nota">O código vale 24 horas. A confirmação chega aqui sozinha, assim que o banco paga.</p>
-        <p class="erro" id="ck-erro-pix" role="alert"></p>
-        <button type="button" class="btn primario largo" id="ck-pix-botao">Gerar o Pix</button>
-      </div>
-      <div id="ck-pix-codigo" hidden>
-        <img id="ck-pix-qr" alt="QR Code do Pix" width="220" height="220">
-        <div class="campo">
-          <label class="rotulo" for="ck-pix-copia">Pix copia e cola</label>
-          <input id="ck-pix-copia" readonly>
+      <!-- II · Dados para a nota -->
+      <form id="form-perfil" novalidate hidden>
+        <div class="linha-titulo"><h2 class="titulo-secao">Dados para a nota fiscal</h2></div>
+        <div class="card grade">
+          <div class="campo s2"><label class="rotulo" for="pf-documento">CPF ou CNPJ</label><input id="pf-documento" inputmode="numeric" autocomplete="off" maxlength="18" required></div>
+          <div class="campo s4"><label class="rotulo" for="pf-nome" id="pf-nome-rotulo">Nome completo ou razão social</label><input id="pf-nome" autocomplete="name" maxlength="120" required></div>
+          <div class="campo s2"><label class="rotulo" for="pf-cep">CEP</label><input id="pf-cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" required></div>
+          <div class="campo s3"><label class="rotulo" for="pf-logradouro">Rua</label><input id="pf-logradouro" autocomplete="address-line1" maxlength="120" required></div>
+          <div class="campo s1"><label class="rotulo" for="pf-numero">Número</label><input id="pf-numero" autocomplete="off" maxlength="20" required></div>
+          <div class="campo s3"><label class="rotulo" for="pf-complemento">Complemento (opcional)</label><input id="pf-complemento" autocomplete="address-line2" maxlength="60"></div>
+          <div class="campo s3"><label class="rotulo" for="pf-bairro">Bairro</label><input id="pf-bairro" maxlength="60"></div>
+          <div class="campo s5"><label class="rotulo" for="pf-cidade">Cidade</label><input id="pf-cidade" autocomplete="address-level2" maxlength="60" required></div>
+          <div class="campo s1"><label class="rotulo" for="pf-uf">UF</label><input id="pf-uf" autocomplete="address-level1" maxlength="2" required></div>
         </div>
-        <div class="botoes">
-          <button type="button" class="btn" id="ck-pix-copiar">Copiar o código</button>
-          <a class="btn" id="ck-pix-link" target="_blank" rel="noopener">Abrir no Mercado Pago</a>
+        <p class="erro" id="pf-erro" role="alert"></p>
+        <div class="checkout-botoes">
+          <button type="button" class="btn" data-etapa="plano">Voltar</button>
+          <button type="submit" class="btn primario" id="pf-salvar">Salvar e continuar<span aria-hidden="true">→</span></button>
         </div>
-        <p class="nota" id="ck-pix-situacao" aria-live="polite">Esperando o pagamento…</p>
-      </div>
-    </section>
+      </form>
 
-    <section class="form checkout-fim" id="ck-fim" hidden aria-live="polite">
-      <h2 id="ck-fim-titulo">Pagamento aprovado</h2>
-      <p class="nota" id="ck-fim-texto"></p>
-      <a class="btn primario" id="ck-voltar" href="https://paulus.ia.br/">Voltar ao PAVLVS</a>
-    </section>
+      <!-- III · Pagamento -->
+      <section id="ck-etapa-pagar" hidden aria-labelledby="ck-pagar-titulo">
+        <div class="linha-titulo">
+          <h2 class="titulo-secao" id="ck-pagar-titulo">Pagamento</h2>
+          <div class="opcoes" id="ck-formas" role="group" aria-label="Forma de pagamento">
+            <button type="button" data-forma="cartao" aria-pressed="true">Cartão</button>
+            <button type="button" data-forma="pix" aria-pressed="false">Pix</button>
+          </div>
+        </div>
+
+        <form id="form-checkout" novalidate hidden>
+          <div class="card cartao-bloco">
+            <div class="cartao-desenho" id="ck-desenho" aria-hidden="true">
+              <div class="cartao-giro">
+                <div class="cartao-face frente">
+                  <div class="cartao-cab"><span class="cartao-marca">Atos</span><span class="cartao-bandeira" id="cd-bandeira"></span></div>
+                  <span class="cartao-chip"></span>
+                  <div class="cartao-numero" id="cd-numero">•••• •••• •••• ••••</div>
+                  <div class="cartao-pe">
+                    <span><small>Titular</small><span id="cd-nome">NOME NO CARTÃO</span></span>
+                    <span class="dir"><small>Validade</small><span>mm/aa</span></span>
+                  </div>
+                </div>
+                <div class="cartao-face verso">
+                  <div class="tarja"></div>
+                  <div class="assinatura"><div class="faixa-ass"></div><div class="cvv">•••</div></div>
+                  <small>Código de segurança</small>
+                </div>
+              </div>
+            </div>
+            <div class="cartao-campos">
+              <div class="checkout-field campo tudo" data-mp-field="cardNumber" role="group" aria-labelledby="card-number-label">
+                <span id="card-number-label" class="rotulo">Número do cartão</span>
+                <div id="form-checkout__cardNumber" data-mp-secure-field="cardNumber" class="secure-input" aria-labelledby="card-number-label"></div>
+              </div>
+              <div class="checkout-field campo tudo" data-mp-field="cardholderName">
+                <label class="rotulo" for="form-checkout__cardholderName">Nome no cartão</label>
+                <input type="text" id="form-checkout__cardholderName" autocomplete="cc-name" required>
+              </div>
+              <div class="checkout-field campo" data-mp-field="expirationDate" role="group" aria-labelledby="expiration-label">
+                <span id="expiration-label" class="rotulo">Validade</span>
+                <div id="form-checkout__expirationDate" data-mp-secure-field="expirationDate" class="secure-input" aria-labelledby="expiration-label"></div>
+              </div>
+              <div class="checkout-field campo" data-mp-field="securityCode" role="group" aria-labelledby="security-code-label">
+                <span id="security-code-label" class="rotulo">CVV</span>
+                <div id="form-checkout__securityCode" data-mp-secure-field="securityCode" class="secure-input" aria-labelledby="security-code-label"></div>
+              </div>
+            </div>
+          </div>
+          <!-- O CardForm exige estes campos; o checkout e de uma parcela e o documento vem dos dados fiscais. -->
+          <select id="form-checkout__issuer" data-mp-sdk-required-field="issuer" hidden aria-hidden="true" tabindex="-1"></select>
+          <select id="form-checkout__installments" data-mp-sdk-required-field="installments" hidden aria-hidden="true" tabindex="-1"></select>
+          <select id="form-checkout__identificationType" data-mp-sdk-required-field="identificationType" hidden aria-hidden="true" tabindex="-1"></select>
+          <p class="erro" id="ck-erro-cartao" role="alert"></p>
+          <p class="nota" id="ck-nota-assinatura"></p>
+          <div class="checkout-botoes">
+            <button type="button" class="btn" data-etapa="dados">Voltar</button>
+            <button type="submit" class="btn primario" id="form-checkout__submit" data-mp-subscription-cta="without-plan-authorized">Assinar</button>
+          </div>
+        </form>
+
+        <section id="ck-pix" hidden aria-label="Pix">
+          <div class="card">
+            <div id="ck-pix-gerar" class="pix-gerar">
+              <p class="nota" id="ck-pix-explica"></p>
+              <p class="erro" id="ck-erro-pix" role="alert"></p>
+              <div><button type="button" class="btn primario" id="ck-pix-botao">Gerar o Pix</button></div>
+            </div>
+            <div id="ck-pix-codigo" class="pix-codigo" hidden>
+              <img id="ck-pix-qr" alt="QR Code do Pix" width="168" height="168">
+              <div class="pix-info">
+                <span class="aguardando" id="ck-pix-situacao" aria-live="polite"><span class="ponto" aria-hidden="true"></span><span id="ck-pix-situacao-texto">Aguardando o pagamento</span></span>
+                <span class="pix-ajuda">Abra o app do banco, escolha Pix e leia o código, ou copie a chave abaixo</span>
+                <div class="pix-copia">
+                  <input id="ck-pix-copia" class="seletor" readonly aria-label="Pix copia e cola">
+                  <button type="button" class="btn p" id="ck-pix-copiar">Copiar</button>
+                </div>
+                <span class="pix-validade" id="ck-pix-validade"></span>
+                <a class="link" id="ck-pix-link" target="_blank" rel="noopener">Abrir no Mercado Pago ↗</a>
+              </div>
+            </div>
+          </div>
+          <div class="checkout-botoes">
+            <button type="button" class="btn" data-etapa="dados">Voltar</button>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <aside class="checkout-resumo" aria-labelledby="ck-resumo-titulo">
+      <h2 class="titulo-secao" id="ck-resumo-titulo">Resumo</h2>
+      <div class="card">
+        <div class="resumo-topo"><img class="logo" src="/assets/paulus-p.png" alt="" width="36" height="36"><span class="nome"><strong id="rs-plano">PAVLVS</strong><small id="rs-ciclo"></small></span></div>
+        <div class="resumo-linhas">
+          <div><span>Plano</span><span id="rs-base">—</span></div>
+          <div><span>Desconto</span><span id="rs-desconto">− R$ 0,00</span></div>
+          <div><span>Pagamento</span><span id="rs-forma">Cartão de crédito</span></div>
+        </div>
+        <div class="resumo-total"><span>Total</span><span><strong id="rs-total">—</strong> <small id="rs-por"></small></span></div>
+      </div>
+      <p class="nota" id="rs-nota"></p>
+    </aside>
   </div>
+
+  <!-- Conclusao -->
+  <section class="checkout-fim" id="ck-fim" hidden aria-live="polite">
+    <span class="fim-marca" aria-hidden="true">✓</span>
+    <h2 id="ck-fim-titulo">Pagamento aprovado</h2>
+    <p id="ck-fim-texto"></p>
+    <div class="card fim-card">
+      <div class="resumo-topo"><img class="logo" src="/assets/paulus-p.png" alt="" width="36" height="36"><span class="nome"><strong id="fm-plano">PAVLVS</strong><small id="fm-ciclo"></small></span><span class="selo" id="fm-selo">Ativa</span></div>
+      <div class="fim-linha">
+        <div><small>Pago</small><span id="fm-pago">—</span></div>
+        <div><small>Pagamento</small><span id="fm-forma">—</span></div>
+        <a class="btn primario" id="ck-voltar" href="https://paulus.ia.br/">Abrir o PAVLVS<span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+    <div class="fim-pe">
+      <span>A fatura fica em Minha conta › Faturamento.</span>
+      <a class="btn p" href="/conta/faturamento">Ver faturas<span aria-hidden="true">→</span></a>
+    </div>
+  </section>
 </main>
 
 <footer class="rodape">
   <span>Atos</span>
-  <div><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></div>
+  <div>
+    <details>
+      <summary>Contato</summary>
+      <div>
+        <a href="mailto:contato@atos.dev.br">contato@atos.dev.br</a>
+        <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">+55 (94) 99241-7837</a>
+      </div>
+    </details>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/termos/">Termos</a>
+  </div>
 </footer>
 
 <script>
@@ -174,10 +230,10 @@
   var NOMES = { mes: "por mês", ano: "por ano" };
   // O que a assinatura do Mercado Pago pode estar: a tela diz cada um.
   var SITUACAO = {
-    authorized: ["Assinatura autorizada", "O cartão foi aceito e a mensalidade fica no automático."],
-    pending: ["Assinatura pendente", "O Mercado Pago ainda está confirmando o cartão. Assim que confirmar, ela aparece em Minha conta › Assinaturas."],
-    paused: ["Assinatura pausada", "A assinatura está pausada: reative em Minha conta › Assinaturas."],
-    canceled: ["Assinatura cancelada", "Esta assinatura foi cancelada. Para voltar, assine de novo."],
+    authorized: ["Assinatura confirmada", "O cartão foi aceito e a mensalidade fica no automático.", "Ativa", ""],
+    pending: ["Assinatura pendente", "O Mercado Pago ainda está confirmando o cartão. Assim que confirmar, ela aparece em Minha conta › Assinaturas.", "Pendente", "neutro"],
+    paused: ["Assinatura pausada", "A assinatura está pausada: reative em Minha conta › Assinaturas.", "Pausada", "neutro"],
+    canceled: ["Assinatura cancelada", "Esta assinatura foi cancelada. Para voltar, assine de novo.", "Cancelada", "perigo"],
   };
   // O que a Atos recusa por regra (a cobranca em dobro, o plano fora de dia): tentar de novo nao muda nada.
   var REGRAS = ["ja_assina", "pago_ate", "troca_de_plano", "sem_assinatura", "sem_perfil"];
@@ -185,13 +241,15 @@
     var t = d.erro || padrao;
     return REGRAS.indexOf(d.codigo) >= 0 ? t.charAt(0).toUpperCase() + t.slice(1) + "." : t + ". Tente novamente.";
   }
-  var estado = { catalogo: null, plano: "escritorio", periodo: "mes", forma: "cartao", perfil: null, processando: false, cardForm: null, montado: false, aberto: false };
+  var estado = { catalogo: null, plano: "escritorio", periodo: "mes", forma: "cartao", perfil: null, processando: false, cardForm: null, montado: false, aberto: false, etapa: "plano", fim: false };
 
   function brl(centavos) { return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
-  function precoAtual() {
-    var id = PRODUTO + "." + estado.plano + "." + estado.periodo;
+  function precoDe(plano, periodo) {
+    var id = PRODUTO + "." + plano + "." + periodo;
     return (estado.catalogo.precos || []).find(function (p) { return p.id === id; }) || null;
   }
+  function precoAtual() { return precoDe(estado.plano, estado.periodo); }
+  function dataBR(d) { return d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
   function mostrarErroInicial(msg) {
     var r = $("checkout-init-error");
     r.textContent = msg; r.hidden = false;
@@ -207,22 +265,90 @@
     return d;
   }
 
+  // ---------------------------------------------------------------- o resumo e as contas
+  /* O ano sai mais barato que 12 meses: o desconto e a diferenca, em centavos. */
+  function descontoAnual(plano) {
+    var m = precoDe(plano, "mes"), a = precoDe(plano, "ano");
+    return m && a ? Math.max(0, m.centavos * 12 - a.centavos) : 0;
+  }
+  function cicloTexto() {
+    var hoje = new Date();
+    if (estado.periodo === "mes" && estado.forma === "cartao") return "Mensal, renova todo dia " + hoje.getDate();
+    var ate = new Date(hoje);
+    if (estado.periodo === "ano") ate.setFullYear(ate.getFullYear() + 1); else ate.setMonth(ate.getMonth() + 1);
+    return (estado.periodo === "ano" ? "Anual" : "Um mês") + ", pago de uma vez · vale até " + dataBR(ate);
+  }
+  function nomeDoPlano(p) { return p.nome.replace(/^PAVLVS /, "").replace(/ · anual$/, ""); }
+  function pessoas(p) { var n = (p.metadados || {}).pessoas || 1; return n === 1 ? "1 usuário" : "Até " + n + " usuários"; }
+
   // ---------------------------------------------------------------- desenhar
   function desenhar() {
     var p = precoAtual();
-    document.querySelectorAll("#ck-planos button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.plano === estado.plano)); });
+    var m = precoDe(estado.plano, "mes");
     document.querySelectorAll("#ck-periodos button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.periodo === estado.periodo)); });
     document.querySelectorAll("#ck-formas button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.forma === estado.forma)); });
-    $("ck-total").innerHTML = p ? "Total: <strong>" + brl(p.centavos) + "</strong> " + NOMES[estado.periodo] : "Total: <strong>—</strong>";
-    $("ck-explica").textContent = estado.forma === "cartao"
-      ? (estado.periodo === "mes" ? "Assinatura no cartão: cobrada todo mês, sem você fazer nada." : "O ano inteiro no cartão, em uma vez.")
-      : (estado.periodo === "mes" ? "Um mês pago no Pix. No mês seguinte, você paga de novo (ou assina no cartão)." : "O ano inteiro no Pix.");
-    $("form-checkout__submit").textContent = estado.periodo === "mes" ? "Assinar" : "Pagar o ano";
-    $("ck-nota-assinatura").hidden = !(estado.periodo === "mes" && estado.forma === "cartao");
-    $("form-perfil").hidden = !estado.aberto || Boolean(estado.perfil);
-    $("form-checkout").hidden = !(estado.aberto && estado.perfil && estado.forma === "cartao") || !$("ck-fim").hidden;
-    $("ck-pix").hidden = !(estado.aberto && estado.perfil && estado.forma === "pix") || !$("ck-fim").hidden;
+    document.querySelectorAll("#ck-planos [data-plano]").forEach(function (b) {
+      var on = b.dataset.plano === estado.plano;
+      b.setAttribute("aria-checked", String(on));
+      var pr = precoDe(b.dataset.plano, estado.periodo);
+      b.querySelector(".preco").textContent = pr ? brl(pr.centavos) + (estado.periodo === "ano" ? "/ano" : "/mês") : "—";
+    });
+    var maior = 0;
+    (estado.catalogo.precos || []).forEach(function (x) { if (x.periodo === "mes") { var pl = x.id.split(".")[1]; var d = descontoAnual(pl); var mm = precoDe(pl, "mes"); if (mm && d) maior = Math.max(maior, Math.round(d / mm.centavos)); } });
+    $("ck-desconto-tag").textContent = maior ? maior + (maior === 1 ? " mês grátis" : " meses grátis") : "";
+
+    // as etapas
+    var feitas = { plano: estado.etapa !== "plano", dados: estado.etapa === "pagar" };
+    document.querySelectorAll("#ck-etapas button").forEach(function (b) {
+      var e = b.dataset.etapa;
+      b.setAttribute("aria-current", e === estado.etapa ? "step" : "false");
+      b.classList.toggle("feita", Boolean(feitas[e]));
+      b.disabled = !(feitas[e] || e === estado.etapa);
+    });
+    $("ck-etapa-plano").hidden = estado.etapa !== "plano";
+    $("form-perfil").hidden = estado.etapa !== "dados";
+    $("ck-etapa-pagar").hidden = estado.etapa !== "pagar";
+    $("ck-continuar").disabled = !estado.aberto;
+
+    // o pagamento
+    $("form-checkout__submit").innerHTML = (estado.periodo === "mes" ? "Assinar" : "Pagar o ano") + " · " + (p ? brl(p.centavos) : "") + '<span aria-hidden="true">→</span>';
+    $("ck-nota-assinatura").textContent = estado.periodo === "mes"
+      ? "Na assinatura mensal, o Mercado Pago cobra o cartão todo mês. Você cancela quando quiser em Minha conta › Assinaturas."
+      : "O ano inteiro no cartão, em uma vez. Ele não renova sozinho: perto do fim, você paga o próximo.";
+    $("ck-pix-explica").textContent = (estado.periodo === "mes" ? "Um mês pago no Pix. No mês seguinte, você paga de novo ou assina no cartão." : "O ano inteiro no Pix.") +
+      " O código vale 24 horas, e a confirmação chega aqui sozinha assim que o banco paga.";
+    $("ck-pix-botao").innerHTML = "Gerar o Pix · " + (p ? brl(p.centavos) : "") + '<span aria-hidden="true">→</span>';
+    var pagar = estado.etapa === "pagar" && !estado.fim;
+    $("form-checkout").hidden = !(pagar && estado.forma === "cartao");
+    $("ck-pix").hidden = !(pagar && estado.forma === "pix");
     if (!$("form-checkout").hidden && !estado.montado) requestAnimationFrame(montarCartao);
+
+    // o resumo
+    if (p) {
+      var desc = estado.periodo === "ano" ? descontoAnual(estado.plano) : 0;
+      $("rs-plano").textContent = "PAVLVS · " + nomeDoPlano(p);
+      $("rs-ciclo").textContent = cicloTexto();
+      $("rs-base").textContent = brl(estado.periodo === "ano" && m ? m.centavos * 12 : p.centavos);
+      $("rs-desconto").textContent = "− " + brl(desc);
+      $("rs-desconto").classList.toggle("verde", desc > 0);
+      $("rs-forma").textContent = estado.forma === "cartao" ? "Cartão de crédito" : "Pix";
+      $("rs-total").textContent = brl(p.centavos);
+      $("rs-por").textContent = NOMES[estado.periodo];
+      $("rs-nota").textContent = estado.periodo === "mes" && estado.forma === "cartao"
+        ? "Você cancela quando quiser em Minha conta › Assinaturas." : "Pago de uma vez: não há cobrança automática depois.";
+    }
+    $("ck-grade").hidden = estado.fim;
+    $("ck-etapas").hidden = estado.fim;
+  }
+
+  function irPara(etapa) {
+    if (estado.processando || estado.fim) return;
+    if (etapa !== "plano" && !estado.aberto) return;
+    if (etapa === "pagar" && !estado.perfil) etapa = "dados";
+    estado.etapa = etapa;
+    if (etapa === "dados") preencherPerfil();
+    desenhar();
+    window.scrollTo(0, 0);
   }
 
   // ---------------------------------------------------------------- o cartao
@@ -244,6 +370,15 @@
     if (falhas.length) mostrarErroInicial("Os campos do cartão não carregaram (" + falhas.join("; ") + "). Um bloqueador de anúncios pode estar barrando o Mercado Pago: desligue-o nesta página e recarregue.");
   }
 
+  /* O cartao desenhado: so o que a pagina sabe sem ver o cartao. */
+  var BANDEIRAS = { visa: "VISA", master: "MASTERCARD", amex: "AMEX", elo: "ELO", hipercard: "HIPERCARD" };
+  function desenharBin(bin) {
+    var d = String(bin || "").replace(/\D/g, "").slice(0, 8);
+    var t = (d + "••••••••••••••••").slice(0, 16);
+    $("cd-numero").textContent = t.replace(/(.{4})/g, "$1 ").trim();
+  }
+  function virar(verso) { $("ck-desenho").classList.toggle("virado", verso); }
+
   async function montarCartao() {
     if (estado.montado) return;
     estado.montado = true;
@@ -260,8 +395,8 @@
       form: {
         id: "form-checkout",
         cardNumber: { id: "form-checkout__cardNumber", placeholder: "0000 0000 0000 0000" },
-        expirationDate: { id: "form-checkout__expirationDate", placeholder: "MM/AA" },
-        securityCode: { id: "form-checkout__securityCode", placeholder: "CVC" },
+        expirationDate: { id: "form-checkout__expirationDate", placeholder: "mm/aa" },
+        securityCode: { id: "form-checkout__securityCode", placeholder: "000" },
         cardholderName: { id: "form-checkout__cardholderName" },
         issuer: { id: "form-checkout__issuer" },
         installments: { id: "form-checkout__installments" },
@@ -273,6 +408,11 @@
           requestAnimationFrame(conferirCamposSeguros);
         },
         onSubmit: function (ev) { ev.preventDefault(); pagarNoCartao(); },
+        onBinChange: function (bin) { desenharBin(bin); },
+        onPaymentMethodsReceived: function (erro, metodos) {
+          var m = !erro && metodos && metodos[0];
+          $("cd-bandeira").textContent = m ? (BANDEIRAS[m.id] || String(m.name || m.id).toUpperCase()) : "";
+        },
       },
     });
   }
@@ -301,11 +441,11 @@
     }
     if (mensal) {
       var s = SITUACAO[d.status] || SITUACAO.pending;
-      fim(s[0], s[1]);
+      fim(s[0], s[1], s[2], s[3]);
     } else if (d.status === "paga") {
-      fim("Pagamento aprovado", "O ano do PAVLVS está pago.");
+      fim("Pagamento aprovado", "O ano do PAVLVS está pago.", "Ativa", "");
     } else {
-      fim("Pagamento em análise", "O Mercado Pago está analisando o pagamento. O resultado aparece em Minha conta › Faturamento.");
+      fim("Pagamento em análise", "O Mercado Pago está analisando o pagamento. O resultado aparece em Minha conta › Faturamento.", "Em análise", "neutro");
     }
   }
 
@@ -315,37 +455,59 @@
     if (estado.processando) return;
     estado.processando = true;
     var botao = $("ck-pix-botao");
+    var antes = botao.innerHTML;
     botao.disabled = true;
     botao.textContent = "Processando…";
     $("ck-erro-pix").textContent = "";
     var d = await pedir("/api/cobranca/v1/pagar", { preco: precoAtual().id, forma: "pix" });
     estado.processando = false;
     botao.disabled = false;
-    botao.textContent = "Gerar o Pix";
+    botao.innerHTML = antes;
     if (d._status >= 400 || !d.pix) { $("ck-erro-pix").textContent = fraseDoErro(d, "não deu para gerar o Pix"); return; }
     $("ck-pix-gerar").hidden = true;
     $("ck-pix-codigo").hidden = false;
     $("ck-pix-qr").src = "data:image/png;base64," + d.pix.qr_code_base64;
     $("ck-pix-copia").value = d.pix.qr_code;
+    var vale = new Date(Date.now() + 24 * 3600 * 1000);
+    $("ck-pix-validade").textContent = "Vale até " + dataBR(vale) + ", " + vale.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
     if (d.pix.ticket_url) $("ck-pix-link").href = d.pix.ticket_url; else $("ck-pix-link").hidden = true;
     var inicio = Date.now();
     clearInterval(vigia);
     vigia = setInterval(async function () {
-      if (Date.now() - inicio > 30 * 60 * 1000) { clearInterval(vigia); $("ck-pix-situacao").textContent = "Ainda esperando. Se já pagou, a confirmação aparece em Minha conta › Faturamento."; return; }
+      if (Date.now() - inicio > 30 * 60 * 1000) { clearInterval(vigia); $("ck-pix-situacao-texto").textContent = "Ainda esperando. Se já pagou, a confirmação aparece em Minha conta › Faturamento."; return; }
       var c = await pedir("/api/cobranca/v1/compras/" + encodeURIComponent(d.id));
-      if (c.status === "paga") { clearInterval(vigia); fim("Pagamento aprovado", "O Pix foi confirmado."); }
-      else if (c.status === "vencida" || c.status === "cancelada" || c.status === "recusada") { clearInterval(vigia); $("ck-pix-situacao").textContent = "Este Pix venceu. Gere outro para pagar."; $("ck-pix-gerar").hidden = false; $("ck-pix-codigo").hidden = true; }
+      if (c.status === "paga") { clearInterval(vigia); fim("Pagamento confirmado", "Recebemos o seu Pix. O PAVLVS está liberado nesta conta.", "Ativa", ""); }
+      else if (c.status === "vencida" || c.status === "cancelada" || c.status === "recusada") { clearInterval(vigia); $("ck-erro-pix").textContent = "Este Pix venceu. Gere outro para pagar."; $("ck-pix-gerar").hidden = false; $("ck-pix-codigo").hidden = true; }
     }, 5000);
   }
 
-  function fim(titulo, texto) {
+  function fim(titulo, texto, selo, tipo) {
+    var p = precoAtual();
     $("ck-fim-titulo").textContent = titulo;
     $("ck-fim-texto").textContent = texto;
+    $("fm-plano").textContent = "PAVLVS · " + nomeDoPlano(p);
+    $("fm-ciclo").textContent = cicloTexto();
+    $("fm-selo").textContent = selo;
+    $("fm-selo").className = "selo" + (tipo ? " " + tipo : "");
+    $("fm-pago").textContent = brl(p.centavos);
+    $("fm-forma").textContent = estado.forma === "cartao" ? "Cartão" : "Pix";
     $("ck-fim").hidden = false;
+    estado.fim = true;
     desenhar();
+    window.scrollTo(0, 0);
   }
 
   // ---------------------------------------------------------------- os dados fiscais
+  function preencherPerfil() {
+    var p = estado.perfil;
+    if (!p || $("form-perfil").dataset.cheio) return;
+    var e = p.endereco || {};
+    $("pf-documento").value = p.documento || ""; $("pf-nome").value = p.nome || "";
+    $("pf-cep").value = e.cep || ""; $("pf-logradouro").value = e.logradouro || ""; $("pf-numero").value = e.numero || "";
+    $("pf-complemento").value = e.complemento || ""; $("pf-bairro").value = e.bairro || ""; $("pf-cidade").value = e.cidade || ""; $("pf-uf").value = e.uf || "";
+    $("form-perfil").dataset.ibge = e.ibge || "";
+    $("form-perfil").dataset.cheio = "1";
+  }
   async function buscarCep() {
     var cep = $("pf-cep").value.replace(/\D/g, "");
     if (cep.length !== 8) return;
@@ -376,14 +538,14 @@
     $("pf-salvar").disabled = false;
     if (d.erro) { $("pf-erro").textContent = d.erro.charAt(0).toUpperCase() + d.erro.slice(1) + "."; return; }
     estado.perfil = d.perfil;
-    desenhar();
+    irPara("pagar");
   }
 
   // ---------------------------------------------------------------- comecar
   async function comecar() {
     var eu = await pedir("/api/eu");
     if (!eu.conta) { location.replace("/entrar/?volta=" + encodeURIComponent(location.pathname + location.search)); return; }
-    $("ck-quem").textContent = "Você está pagando com a Conta Atos " + eu.conta.email + ".";
+    $("ck-quem").textContent = "Você está pagando com a Conta Atos " + eu.conta.email;
     var cat = await pedir("/api/cobranca/v1/catalogo/" + PRODUTO + "?volta=" + encodeURIComponent(q.get("volta") || ""));
     if (!cat.precos) { mostrarErroInicial("Não deu para carregar os planos: recarregue a página."); return; }
     estado.catalogo = cat;
@@ -396,27 +558,35 @@
     if (planos.indexOf(pedido[1]) >= 0) estado.plano = pedido[1];
     if (pedido[2] === "ano" || pedido[2] === "mes") estado.periodo = pedido[2];
     $("ck-planos").innerHTML = planos.map(function (pl) {
-      var p = cat.precos.find(function (x) { return x.id === PRODUTO + "." + pl + ".mes"; });
-      return '<button type="button" data-plano="' + pl + '" aria-pressed="false">' + p.nome.replace(/^PAVLVS /, "") + "</button>";
+      var p = precoDe(pl, "mes");
+      return '<button type="button" role="radio" data-plano="' + pl + '" aria-checked="false"><span class="radio" aria-hidden="true"></span>' +
+        '<span class="nome"><strong>' + nomeDoPlano(p) + "</strong><small>" + pessoas(p) + '</small></span><span class="preco"></span></button>';
     }).join("");
     estado.perfil = (await pedir("/api/cobranca/v1/cliente")).perfil || null;
     desenhar();
   }
 
   document.addEventListener("click", function (ev) {
-    var b = ev.target.closest("button[data-plano], button[data-periodo], button[data-forma]");
+    var et = ev.target.closest("[data-etapa]");
+    if (et) { irPara(et.dataset.etapa); return; }
+    var b = ev.target.closest("[data-plano], button[data-periodo], button[data-forma]");
     if (!b || estado.processando) return;
     if (b.dataset.plano) estado.plano = b.dataset.plano;
     if (b.dataset.periodo) estado.periodo = b.dataset.periodo;
     if (b.dataset.forma) estado.forma = b.dataset.forma;
     desenhar();
   });
+  $("ck-continuar").addEventListener("click", function () { irPara("dados"); });
   $("form-perfil").addEventListener("submit", salvarPerfil);
   $("pf-cep").addEventListener("blur", buscarCep);
   $("ck-pix-botao").addEventListener("click", gerarPix);
   $("ck-pix-copiar").addEventListener("click", function () {
     navigator.clipboard.writeText($("ck-pix-copia").value).then(function () { $("ck-pix-copiar").textContent = "Copiado"; });
   });
+  // o cartao desenhado: o nome enquanto digita, e vira no codigo de seguranca (o foco entra no iframe dele)
+  $("form-checkout__cardholderName").addEventListener("input", function () { $("cd-nome").textContent = this.value.toUpperCase() || "NOME NO CARTÃO"; });
+  $("form-checkout").addEventListener("focusin", function (ev) { virar(Boolean(ev.target.closest("#form-checkout__securityCode"))); });
+  $("ck-desenho").addEventListener("click", function () { virar(!this.classList.contains("virado")); });
   comecar().catch(function (e) { mostrarErroInicial("Não deu para abrir o checkout: recarregue a página."); console.error(e); });
 })();
 </script>

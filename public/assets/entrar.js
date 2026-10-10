@@ -53,7 +53,8 @@
   var DIS = function () { return S.ocupado ? " disabled" : ""; };
   function botao(texto) { return '<button type="submit" class="btn primario largo"' + DIS() + ">" + texto + "</button>"; }
   function link(acao, texto, forte) { return '<button type="button" class="link' + (forte ? " forte" : "") + '" data-acao="' + acao + '">' + texto + "</button>"; }
-  function cabeca(titulo, sub) { return '<div class="cabeca"><h1>' + titulo + "</h1>" + (sub ? "<p>" + sub + "</p>" : "") + "</div>"; }
+  /* a frase curta embaixo do titulo vai em prata; a explicacao longa, em cinza */
+  function cabeca(titulo, sub, longo) { return '<div class="cabeca"><h1>' + titulo + "</h1>" + (sub ? (longo ? '<p class="longo">' : "<p>") + sub + "</p>" : "") + "</div>"; }
   function pe(conteudo) { return '<div class="pe">' + conteudo + "</div>"; }
   function maiuscula(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
   var COD = 'inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required';
@@ -84,17 +85,17 @@
         botao("Criar conta") + comGoogle() + "</form>" +
         pe("Já tem conta? " + link("entrar", "Entrar", true));
     } else if (S.modo === "confirmar") {
-      h = cabeca("Confirme o seu e-mail", "Enviamos um código de 6 dígitos para <strong>" + esc(S.email) + "</strong>. Ele vale 15 minutos.") +
+      h = cabeca("Confirme o seu e-mail", "Enviamos um código de 6 dígitos para <strong>" + esc(S.email) + "</strong>. Ele vale 15 minutos.", true) +
         '<form class="form" data-form="confirmar">' + ERRO() + (S.aviso ? '<p class="ok">' + esc(S.aviso) + "</p>" : "") +
         campo("codigo", "Código", "text", COD, "codigo") + botao("Confirmar") + "</form>" +
         pe(link("criar", "Voltar") + (pendente ? " · " + link("reenviar", "Reenviar código") : ""));
     } else if (S.modo === "esqueci") {
-      h = cabeca("Trocar a senha", "Mandamos um código para o seu e-mail. Se você só entrava com o Google, assim você cria uma senha para a mesma conta.") +
+      h = cabeca("Trocar a senha", "Mandamos um código para o seu e-mail. Se você só entrava com o Google, assim você cria uma senha para a mesma conta.", true) +
         '<form class="form" data-form="esqueci">' + ERRO() +
         campo("email", "E-mail", "email", 'autocomplete="email" maxlength="200" placeholder="voce@empresa.com" required value="' + esc(S.email) + '"') +
         botao("Enviar o código") + "</form>" + pe(link("entrar", "Voltar"));
     } else if (S.modo === "redefinir") {
-      h = cabeca("Trocar a senha", "Se <strong>" + esc(S.email) + "</strong> tem conta, chegou lá um código de 6 dígitos. Ele vale 15 minutos.") +
+      h = cabeca("Trocar a senha", "Se <strong>" + esc(S.email) + "</strong> tem conta, chegou lá um código de 6 dígitos. Ele vale 15 minutos.", true) +
         '<form class="form" data-form="redefinir">' + ERRO() +
         campo("codigo", "Código", "text", COD, "codigo") +
         campo("senha", "Nova senha", "password", 'autocomplete="new-password" maxlength="200" required') +

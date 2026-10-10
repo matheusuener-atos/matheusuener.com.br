@@ -14,11 +14,13 @@
 <meta property="og:image" content="https://atos.dev.br/foto-atos.jpg">
 <link rel="canonical" href="https://atos.dev.br/">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/quadros/pentecostes.jpg" as="image">
 <link rel="stylesheet" href="/assets/conta.css">
 <script src="/assets/tema.js"></script>
 <script src="/assets/topo.js" defer></script>
+<script src="/assets/home.js" defer></script>
 </head>
-<body>
+<body class="home-pagina">
 <header class="topo">
   <a class="marca" href="/" aria-label="Atos, página inicial">Atos</a>
   <nav aria-label="Principal">
@@ -29,80 +31,100 @@
   </nav>
 </header>
 
-<main class="home">
-  <section class="abertura">
-    <span class="lema">Acts of the Apostles · Product Engineering · Systems Development</span>
-    <h1>Projetamos e construímos software do problema à entrega, com o mesmo cuidado em cada etapa.</h1>
-    <div class="chamadas">
-      <a class="btn primario" href="https://wa.me/5594992417837?text=Ol%C3%A1%2C%20Matheus!%20Gostaria%20de%20agendar%20uma%20conversa." target="_blank" rel="noopener">Agendar uma conversa</a>
-      <a class="btn" href="#projetos">Conhecer a Atos<span class="seta" aria-hidden="true">→</span></a>
+<section class="cena" id="cena" aria-label="The Pentecost, Jean II Restout">
+  <div class="cena-palco">
+    <div class="cena-quadro" id="cena-quadro">
+      <div class="tela" id="cena-tela"></div>
+      <div class="vinheta" id="cena-vinheta"></div>
+      <div class="moldura" id="cena-moldura"></div>
     </div>
-  </section>
+    <div class="cena-legenda" id="cena-legenda"><span>The Pentecost</span><span>Jean II Restout</span></div>
+    <div class="cena-titulo" id="cena-titulo">
+      <span class="coroa-grande" aria-hidden="true"></span>
+      <blockquote>
+        <p>“E muitos sinais e prodígios eram feitos entre o povo pelas mãos dos apóstolos...”</p>
+        <cite>Atos 5:12</cite>
+      </blockquote>
+    </div>
+    <div class="cena-dica" id="cena-dica">Role para entrar</div>
+    <div class="cena-texto" id="cena-texto">
+      <span class="lema">Acts of the Apostles · Product Engineering · Systems Development</span>
+      <h1 aria-label="Projetamos e construímos software do problema à entrega, com o mesmo cuidado em cada etapa."><span aria-hidden="true" id="h1-digitado"></span><span class="cursor" aria-hidden="true" id="h1-cursor"></span><span aria-hidden="true" class="resto" id="h1-resto">Projetamos e construímos software do problema à entrega, com o mesmo cuidado em cada etapa.</span></h1>
+      <div class="chamadas">
+        <a class="btn primario" href="https://wa.me/5594992417837?text=Ol%C3%A1%2C%20Matheus!%20Gostaria%20de%20agendar%20uma%20conversa." target="_blank" rel="noopener">Agendar uma conversa</a>
+        <a class="btn" href="#projetos">Conhecer a Atos<span class="seta" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
 
+<main class="home">
   <section id="projetos">
-    <h2 class="titulo-secao">Projetos</h2>
-    <div class="projetos">
-      <article class="projeto">
-        <div>
-          <div class="cab"><h3>PAVLVS</h3><span>Windows</span></div>
+    <header>
+      <h2 class="titulo-pagina">Projetos</h2>
+      <p class="descricao">Softwares construídos e mantidos pela Atos.</p>
+    </header>
+    <div class="faixa" id="faixa">
+      <div class="faixa-trilho" id="faixa-trilho">
+        <article class="projeto">
+          <div class="cab"><span class="inicial" aria-hidden="true">P</span><span class="nome"><strong>PAVLVS</strong><small>Windows</small></span><span class="romano" aria-hidden="true">I</span></div>
           <p>O assistente jurídico para escritórios de advocacia</p>
-        </div>
-        <div class="acoes-projeto">
-          <a href="/pavlvs/assinar/" data-mp-checkout-cta="checkout-api">Assinar<span aria-hidden="true">→</span></a>
-          <a href="https://paulus.ia.br" target="_blank" rel="noopener">Site<span aria-hidden="true">↗</span></a>
-          <a href="https://github.com/matheusuener-atos/coryphaeus/releases/latest" target="_blank" rel="noopener">Download<span aria-hidden="true">↓</span></a>
-        </div>
-      </article>
-      <article class="projeto">
-        <div>
-          <div class="cab"><h3>Coryphaeus</h3><span>Python</span></div>
+          <div class="acoes">
+            <a class="btn p" href="/pavlvs/assinar/" data-mp-checkout-cta="checkout-api">Assinar<span aria-hidden="true">→</span></a>
+            <a class="btn p" href="https://paulus.ia.br" target="_blank" rel="noopener">Site<span aria-hidden="true">↗</span></a>
+            <a class="btn p" href="https://github.com/matheusuener-atos/coryphaeus/releases/latest" target="_blank" rel="noopener">Download<span aria-hidden="true">↓</span></a>
+          </div>
+        </article>
+        <article class="projeto">
+          <div class="cab"><span class="inicial" aria-hidden="true">C</span><span class="nome"><strong>Coryphaeus</strong><small>Python</small></span><span class="romano" aria-hidden="true">II</span></div>
           <p>Agent OS for orchestrating local AI agents and tools</p>
-        </div>
-        <div class="acoes-projeto">
-          <a href="https://github.com/matheusuener-atos/coryphaeus" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
-        </div>
-      </article>
-      <article class="projeto">
-        <div>
-          <div class="cab"><h3>Plantare Maps</h3><span>HTML</span></div>
+          <div class="acoes">
+            <a class="btn p" href="https://github.com/matheusuener-atos/coryphaeus" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
+          </div>
+        </article>
+        <article class="projeto">
+          <div class="cab"><span class="inicial" aria-hidden="true">P</span><span class="nome"><strong>Plantare Maps</strong><small>HTML</small></span><span class="romano" aria-hidden="true">III</span></div>
           <p>Gerador de mapas agrícola para planio/pulverização: do KMZ do talhão ao plano com bordadura, linhas, manobras e exportação em KMZ/Shapefile.</p>
-        </div>
-        <div class="acoes-projeto">
-          <a href="https://github.com/matheusuener-atos/plantare-maps" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
-        </div>
-      </article>
+          <div class="acoes">
+            <a class="btn p" href="https://github.com/matheusuener-atos/plantare-maps" target="_blank" rel="noopener">GitHub<span aria-hidden="true">↗</span></a>
+          </div>
+        </article>
+      </div>
     </div>
   </section>
 
   <section id="indice">
-    <h2 class="titulo-secao">Índice</h2>
-    <nav class="indice" aria-label="Índice">
-      <a href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">
-        <span class="n">I</span>
-        <span class="t"><span class="titulo">Conhecer portfólio</span><span class="desc">O projeto em detalhe</span><span class="novo">Novo</span></span>
-        <span class="seta" aria-hidden="true">→</span>
+    <h2 class="titulo-pagina">Índice</h2>
+    <p class="descricao">Portfólio, carta, escritos e contatos.</p>
+    <h3 class="titulo-secao">Para continuar</h3>
+    <nav class="card indice" aria-label="Índice">
+      <a class="revela" href="https://github.com/matheusuener-atos" target="_blank" rel="noopener">
+        <span class="n" aria-hidden="true">I</span>
+        <span class="t"><span class="titulo">Conhecer portfólio</span><span class="desc">O projeto em detalhe</span></span>
+        <span class="fim"><span class="selo">Novo</span><span class="seta" aria-hidden="true">→</span></span>
       </a>
-      <a id="carta" href="mailto:contato@atos.dev.br?subject=Quero%20receber%20a%20carta%20semanal">
-        <span class="n">II</span>
+      <a class="revela" id="carta" href="mailto:contato@atos.dev.br?subject=Quero%20receber%20a%20carta%20semanal">
+        <span class="n" aria-hidden="true">II</span>
         <span class="t"><span class="titulo">Carta semanal</span><span class="desc">Um e-mail por semana sobre o processo</span></span>
-        <span class="seta" aria-hidden="true">→</span>
+        <span class="fim"><span class="seta" aria-hidden="true">→</span></span>
       </a>
-      <a id="escritos" href="#escritos">
-        <span class="n">III</span>
+      <a class="revela" id="escritos" href="#escritos">
+        <span class="n" aria-hidden="true">III</span>
         <span class="t"><span class="titulo">Escritos</span><span class="desc">O que aprendo construindo</span></span>
-        <span class="seta" aria-hidden="true">→</span>
+        <span class="fim"><span class="seta" aria-hidden="true">→</span></span>
       </a>
-      <a href="https://wa.me/5594992417837" target="_blank" rel="noopener">
-        <span class="n">IV</span>
+      <a class="revela" href="https://wa.me/5594992417837" target="_blank" rel="noopener">
+        <span class="n" aria-hidden="true">IV</span>
         <span class="t"><span class="titulo">Contatos</span><span class="desc">WhatsApp, e-mail e GitHub</span></span>
-        <span class="seta" aria-hidden="true">→</span>
+        <span class="fim"><span class="seta" aria-hidden="true">→</span></span>
       </a>
     </nav>
   </section>
 
   <section class="fundador">
-    <img src="/foto-atos.jpg" alt="Retrato de Matheus Uener" width="96" height="96" decoding="async">
-    <p>Desenvolver, construir e entregar soluções não é só um hobby para mim: é um trabalho que eu levo a sério e faço com excelência.</p>
+    <img class="revela" src="/foto-atos.jpg" alt="Retrato de Matheus Uener" width="72" height="72" decoding="async">
+    <p class="revela">“Desenvolver, construir e entregar soluções não é só um hobby para mim: é um trabalho que eu levo a sério e faço com excelência.”</p>
+    <span>Matheus Uener</span>
   </section>
 </main>
 
